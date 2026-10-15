@@ -40,7 +40,7 @@ test('hero: background bound to a variable', () => {
 
 test('hero: grid styles only on breakpoints that change', () => {
   assert.deepEqual(hero.styles.filter((s) => s.class === 'hero_component'), [
-    { class: 'hero_component', breakpoint: 'main', props: { display: 'grid', 'grid-template-columns': 'repeat(2, minmax(0, 1fr))' }, variables: { 'row-gap': 'space-lg', 'column-gap': 'space-lg' } },
+    { class: 'hero_component', breakpoint: 'main', props: { display: 'grid', 'grid-template-columns': 'repeat(2, minmax(0, 1fr))' }, variables: { 'grid-row-gap': 'space-lg', 'grid-column-gap': 'space-lg' } },
     { class: 'hero_component', breakpoint: 'medium', props: { 'grid-template-columns': 'repeat(1, minmax(0, 1fr))' }, variables: {} },
   ]);
 });
@@ -65,7 +65,7 @@ test('features: group and ordered component slots', () => {
   assert.deepEqual(plan.components.map((c) => [c.ref, c.variant, c.order, c.props.title]), [['card', 'default', 1, 'Fast'], ['card', 'default', 2, 'Safe']]);
   const grid = plan.styles.filter((s) => s.class === 'features_grid');
   assert.deepEqual(grid.map((s) => s.breakpoint), ['main', 'medium', 'small']);
-  assert.deepEqual(grid[2].variables, { 'row-gap': 'space-md-mobile', 'column-gap': 'space-md-mobile' });
+  assert.deepEqual(grid[2].variables, { 'grid-row-gap': 'space-md-mobile', 'grid-column-gap': 'space-md-mobile' });
   const stack = plan.styles.filter((s) => s.class === 'features_component');
   assert.equal(stack[0].props['flex-direction'], 'column');
 });

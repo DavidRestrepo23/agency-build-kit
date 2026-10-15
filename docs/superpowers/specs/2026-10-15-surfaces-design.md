@@ -116,3 +116,8 @@ La clase se agrega a `classes`. Los nombres de variables coinciden con los ya cr
 |---|---|
 | Webflow convierte la segunda clase en combo en vez de apilar la global | Las surfaces se crean en setup antes de cualquier uso (como las utilities de spacing); QA estructural verifica las clases presentes |
 | `--update` cambia variables usadas por el cliente | Reporta cada valor cambiado; nunca borra variables ni clases |
+
+## 7. Adenda (durante la prueba E2E, aprobada por el desarrollador)
+
+- **Bloque `page` en `tokens.yaml`:** `page: { background, color, text }` (tokens de color y tipografía). `plan-setup` estiliza `page-wrapper` con `background-color`, `color` (variables), `font-family`, `font-weight`, `line-height` y `font-size` responsivo ligado a la variable `<text>-size`. Validación: tokens inexistentes → `unknown color token` / `unknown typography token` en `/page/<clave>`.
+- **Bug corregido:** los gaps de layout se emiten como `grid-row-gap` / `grid-column-gap` (claves con las que Webflow guarda el gap, también en flex), no `row-gap` / `column-gap`.

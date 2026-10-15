@@ -193,3 +193,11 @@ test('final review 1.1: radius named like an Object prototype key is unknown', (
   editYaml(dir, 'tokens.yaml', (t) => { t.surfaces.card.radius = 'toString'; });
   assert.ok(errorsFor(dir).some((e) => e.path === '/surfaces/card/radius' && /unknown radius "toString"/.test(e.message)));
 });
+
+test('page: unknown base tokens are reported', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'tokens.yaml', (t) => { t.page = { background: 'brand.missing', color: 'neutral.black', text: 'text.huge' }; });
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => e.path === '/page/background' && /unknown color token "brand\.missing"/.test(e.message)));
+  assert.ok(errors.some((e) => e.path === '/page/text' && /unknown typography token "text\.huge"/.test(e.message)));
+});

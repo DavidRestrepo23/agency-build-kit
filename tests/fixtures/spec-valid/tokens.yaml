@@ -19,6 +19,7 @@ radii: { button: 8, card: 40 }
 shadows: []
 fonts:
   - { family: Inter, weights: [400, 700], source: google }
+page: { background: neutral.white, color: neutral.black, text: text.regular }
 surfaces:
   card:
     background: neutral.glass

@@ -7573,8 +7573,8 @@ function layoutStyles(cls, layout, spec) {
   }
   if (layout.gap) {
     for (const [bp, { name }] of Object.entries(responsiveVariableNames(layout.gap, spec.tokens.spacing[layout.gap]))) {
-      vars[bp]["row-gap"] = name;
-      vars[bp]["column-gap"] = name;
+      vars[bp]["grid-row-gap"] = name;
+      vars[bp]["grid-column-gap"] = name;
     }
   }
   return BREAKPOINTS.filter((bp) => bp === "main" || Object.keys(props[bp]).length || Object.keys(vars[bp]).length).map((bp) => ({ class: cls, breakpoint: bp, props: props[bp], variables: vars[bp] }));

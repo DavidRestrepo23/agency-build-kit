@@ -40,6 +40,19 @@ export function planSetup(spec) {
     variables.push({ collection: 'Colors', name: variableName(color.name), type: 'color', value: color.value });
   }
 
+  const page = spec.tokens.page;
+  if (page) {
+    const vars = {};
+    if (page.background) vars['background-color'] = variableName(page.background);
+    if (page.color) vars.color = variableName(page.color);
+    const text = page.text && spec.tokens.typography.find((t) => t.name === page.text);
+    const props = text ? { 'font-family': text.family, 'font-weight': String(text.weight), 'line-height': String(text.lineHeight) } : {};
+    const sizes = text ? responsiveVariableNames(text.name, text.size, '-size') : { main: null };
+    for (const [bp, size] of Object.entries(sizes)) {
+      style('page-wrapper', bp, bp === 'main' ? props : {}, { ...(bp === 'main' ? vars : {}), ...(size ? { 'font-size': size.name } : {}) });
+    }
+  }
+
   style('padding-global', 'main', { 'padding-left': '2.5rem', 'padding-right': '2.5rem' });
   style('padding-global', 'small', { 'padding-left': '1.25rem', 'padding-right': '1.25rem' });
   for (const [size, rem] of Object.entries(CONTAINERS_REM)) {

@@ -122,3 +122,10 @@ test('final review 1.1: every surface used by a plan exists in the setup classes
     for (const cls of plan.utilitiesUsed.filter((u) => u.startsWith('surface-'))) assert.ok(setup.classes.includes(cls), cls);
   }
 });
+
+test('page: page-wrapper gets base background, color and text', () => {
+  const wrapper = setup.styles.filter((s) => s.class === 'page-wrapper');
+  assert.equal(wrapper.length, 1);
+  assert.deepEqual(wrapper[0].props, { 'font-family': 'Inter', 'font-weight': '400', 'line-height': '1.5' });
+  assert.deepEqual(wrapper[0].variables, { 'background-color': 'neutral-white', color: 'neutral-black', 'font-size': 'text-regular-size' });
+});

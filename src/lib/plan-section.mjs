@@ -29,8 +29,9 @@ function layoutStyles(cls, layout, spec) {
   }
   if (layout.gap) {
     for (const [bp, { name }] of Object.entries(responsiveVariableNames(layout.gap, spec.tokens.spacing[layout.gap]))) {
-      vars[bp]['row-gap'] = name;
-      vars[bp]['column-gap'] = name;
+      // Webflow stores gaps under grid-*-gap keys, also for flex layouts.
+      vars[bp]['grid-row-gap'] = name;
+      vars[bp]['grid-column-gap'] = name;
     }
   }
   return BREAKPOINTS

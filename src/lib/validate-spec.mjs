@@ -52,6 +52,11 @@ function crossReferenceErrors(spec) {
     }
     if (surface.radius !== undefined && !Object.hasOwn(radii, surface.radius)) err('tokens.yaml', `${base}/radius`, `unknown radius "${surface.radius}"`);
   }
+  const page = spec.tokens.page ?? {};
+  for (const key of ['background', 'color']) {
+    if (page[key] && !colors.has(page[key])) err('tokens.yaml', `/page/${key}`, `unknown color token "${page[key]}"`);
+  }
+  if (page.text && !typography.has(page.text)) err('tokens.yaml', '/page/text', `unknown typography token "${page.text}"`);
   const checkSurface = (file, path, name) => {
     if (name && !surfaces.has(name)) err(file, `${path}/surface`, `unknown surface "${name}"`);
   };

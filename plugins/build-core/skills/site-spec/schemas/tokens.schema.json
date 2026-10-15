@@ -204,6 +204,22 @@
           }
         }
       }
+    },
+    "page": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "background": {
+          "$ref": "common.schema.json#/definitions/tokenName"
+        },
+        "color": {
+          "$ref": "common.schema.json#/definitions/tokenName"
+        },
+        "text": {
+          "$ref": "common.schema.json#/definitions/tokenName"
+        }
+      }
     }
   }
 }

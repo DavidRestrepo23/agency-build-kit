@@ -29,6 +29,16 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 6. **Assets:** logos/icons `kind: svg`; photos/mockups `kind: raster` with `scale: 2`. Manifest `file` is a file name relative to `site-spec/assets/` (e.g. `hero-mockup@2x.png`, not `assets/hero-mockup@2x.png`).
 7. **Code components:** set `needsCodeComponent: true` on sections whose behavior native Webflow cannot express (calculators, complex filters, carousels with logic).
 
+## Page base
+
+Optional `page` block in `tokens.yaml` sets the inheritable base on `page-wrapper` (page background, text color, base text style):
+
+```yaml
+page: { background: surface.base, color: neutral.white, text: text.regular }
+```
+
+Set it whenever the page background is not white or the body text is not the browser default.
+
 ## Surfaces (box styles)
 
 Reusable box styles live in `tokens.yaml` under `surfaces` and are referenced with `surface: <name>` on a `section` or a `group` child:

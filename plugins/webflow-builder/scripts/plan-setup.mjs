@@ -14565,6 +14565,22 @@ var tokens_schema_default = {
           }
         }
       }
+    },
+    page: {
+      type: "object",
+      minProperties: 1,
+      additionalProperties: false,
+      properties: {
+        background: {
+          $ref: "common.schema.json#/definitions/tokenName"
+        },
+        color: {
+          $ref: "common.schema.json#/definitions/tokenName"
+        },
+        text: {
+          $ref: "common.schema.json#/definitions/tokenName"
+        }
+      }
     }
   }
 };
@@ -15134,6 +15150,11 @@ function crossReferenceErrors(spec) {
     }
     if (surface.radius !== void 0 && !Object.hasOwn(radii, surface.radius)) err("tokens.yaml", `${base}/radius`, `unknown radius "${surface.radius}"`);
   }
+  const page = spec.tokens.page ?? {};
+  for (const key of ["background", "color"]) {
+    if (page[key] && !colors.has(page[key])) err("tokens.yaml", `/page/${key}`, `unknown color token "${page[key]}"`);
+  }
+  if (page.text && !typography.has(page.text)) err("tokens.yaml", "/page/text", `unknown typography token "${page.text}"`);
   const checkSurface = (file, path, name) => {
     if (name && !surfaces.has(name)) err(file, `${path}/surface`, `unknown surface "${name}"`);
   };
@@ -15191,12 +15212,12 @@ function crossReferenceErrors(spec) {
   spec.project.pages.forEach((p, i) => {
     if (!spec.pages[p.slug]) err("project.yaml", `/pages/${i}`, `page "${p.slug}" has no pages/${p.slug}.yaml`);
   });
-  for (const [slug, page] of Object.entries(spec.pages)) {
+  for (const [slug, page2] of Object.entries(spec.pages)) {
     const file = `pages/${slug}.yaml`;
     if (!declared.has(slug)) err(file, "/", `page "${slug}" is not listed in project.yaml`);
-    if (page.page !== slug) err(file, "/page", `"page" must equal the file name "${slug}"`);
+    if (page2.page !== slug) err(file, "/page", `"page" must equal the file name "${slug}"`);
     const ids = /* @__PURE__ */ new Set();
-    page.sections.forEach((section, si) => {
+    page2.sections.forEach((section, si) => {
       const base = `/sections/${si}`;
       if (ids.has(section.id)) err(file, `${base}/id`, `duplicate section id "${section.id}"`);
       ids.add(section.id);
@@ -15307,6 +15328,18 @@ function planSetup(spec) {
   };
   for (const color of spec.tokens.colors) {
     variables.push({ collection: "Colors", name: variableName(color.name), type: "color", value: color.value });
+  }
+  const page = spec.tokens.page;
+  if (page) {
+    const vars = {};
+    if (page.background) vars["background-color"] = variableName(page.background);
+    if (page.color) vars.color = variableName(page.color);
+    const text = page.text && spec.tokens.typography.find((t) => t.name === page.text);
+    const props = text ? { "font-family": text.family, "font-weight": String(text.weight), "line-height": String(text.lineHeight) } : {};
+    const sizes = text ? responsiveVariableNames(text.name, text.size, "-size") : { main: null };
+    for (const [bp, size] of Object.entries(sizes)) {
+      style("page-wrapper", bp, bp === "main" ? props : {}, { ...bp === "main" ? vars : {}, ...size ? { "font-size": size.name } : {} });
+    }
   }
   style("padding-global", "main", { "padding-left": "2.5rem", "padding-right": "2.5rem" });
   style("padding-global", "small", { "padding-left": "1.25rem", "padding-right": "1.25rem" });

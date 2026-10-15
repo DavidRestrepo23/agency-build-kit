@@ -35,6 +35,7 @@ Read the `site-spec` skill first; it defines the output format.
 | Instance of a library component | `component` with `ref` + `variant` |
 | Vector / icon / logo | `svg` asset |
 | Image fill / photo | `image` raster asset, `ratio` from frame size |
+| Page frame fill and dominant body text color/style | `tokens.yaml` `page: { background, color, text }` |
 | Nested frame grouping children | `group` with kebab `name` |
 | Frame with fill / stroke / corner radius / padding (card, badge, panel) | `group` (or `section`) with `surface: <name>`; define the surface once in `tokens.yaml` and reuse it for identical boxes |
 | Mobile/tablet frames of the same section | responsive values (`columns`, sizes) and `notes.responsive` |
