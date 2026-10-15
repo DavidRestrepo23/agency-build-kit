@@ -36,8 +36,31 @@ test('marketplace lists both plugins with existing sources', () => {
   }
 });
 
+const EXPECTED_FILES = {
+  'build-core': [
+    'skills/site-spec/SKILL.md',
+    'skills/figma-extract/SKILL.md',
+    'agents/figma-auditor.md',
+    'commands/build-audit.md',
+  ],
+  'webflow-builder': [
+    'skills/client-first/SKILL.md',
+    'skills/wf-bootstrap/SKILL.md',
+    'skills/wf-section-build/SKILL.md',
+    'agents/wf-qa-reviewer.md',
+    'commands/wf-setup.md',
+    'commands/wf-build.md',
+    'commands/wf-qa.md',
+    'commands/wf-component.md',
+  ],
+};
+
 for (const plugin of PLUGINS) {
   const dir = join(ROOT, 'plugins', plugin);
+
+  test(`${plugin}: ships every expected skill, agent and command`, () => {
+    for (const file of EXPECTED_FILES[plugin]) assert.ok(existsSync(join(dir, file)), `missing ${plugin}/${file}`);
+  });
 
   test(`${plugin}: plugin.json name and version`, () => {
     const manifest = readJson(join(dir, '.claude-plugin/plugin.json'));
