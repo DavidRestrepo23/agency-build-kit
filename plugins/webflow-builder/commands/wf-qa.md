@@ -16,7 +16,7 @@ Page: $ARGUMENTS
      "styles": [{ "name": "<class>", "breakpoint": "main", "props": { "<css-prop>": "<raw value, not variable>" } }]
    }
    ```
-   `sections` in DOM order; `headings` in DOM order within each section; `styles` only raw (non-variable) values.
+   `sections` in DOM order; `classes` lists every class name on every element of the section, one name per entry (split stacked classes like `features_grid surface-card`); `headings` in DOM order within each section; `styles` only raw (non-variable) values.
 2. Run:
    ```bash
    node "${CLAUDE_PLUGIN_ROOT}/scripts/qa-structural.mjs" site-spec <page> site-spec/qa/<page>.dump.json

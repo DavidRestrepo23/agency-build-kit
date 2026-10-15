@@ -35,4 +35,9 @@ MCP call fails → retry once → if it still fails, stop and report the exact c
 
 ## Update mode (`/wf-setup --update`)
 
-Requires `webflow.setup.status = done`. Re-run the same plan idempotently: create missing variables and classes, update variables whose value changed (report every old → new value), re-apply every `styles[]` entry with `update_style`. Do not recreate the style-guide page or existing components. Never delete variables or classes.
+Requires `webflow.setup.status = done`. Re-run the same plan idempotently:
+
+1. Create missing variables and classes; update variables whose value changed (report every old → new value).
+2. For every class in the plan, read its current properties per breakpoint (`query_styles` with `include_breakpoints`). Make each class/breakpoint match the plan exactly: `update_style` with the plan's `props`/`variables` and `remove_properties` for every property present in Webflow but absent from that plan entry. A breakpoint that has properties in Webflow but no plan entry gets all of them removed. `update_style` merges, so skipping this step leaves stale borders, radii or paddings.
+3. Components and fonts: create the ones in the plan that do not exist yet (same steps as the first run); do not rebuild existing components or the style-guide page.
+4. Never delete variables or classes; list variables and classes that exist in Webflow but are no longer in the plan so the developer can remove them by hand.

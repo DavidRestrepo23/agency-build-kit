@@ -7487,6 +7487,259 @@ function resolveResponsive(value) {
   }
   throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
 }
+function changedBreakpoints(resolved) {
+  const out = [["main", resolved.main]];
+  if (resolved.medium !== resolved.main) out.push(["medium", resolved.medium]);
+  if (resolved.small !== resolved.medium) out.push(["small", resolved.small]);
+  return out;
+}
+
+// src/lib/variables.mjs
+function variableName(token) {
+  return token.replaceAll(".", "-");
+}
+function responsiveVariableNames(token, value, suffix = "") {
+  const resolved = resolveResponsive(value);
+  const base = variableName(token) + suffix;
+  const out = { main: { name: base, value: resolved.main } };
+  if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
+  if (resolved.small !== resolved.medium) out.small = { name: `${base}-mobile`, value: resolved.small };
+  return out;
+}
+
+// src/lib/components.mjs
+function primaryVariantName(component) {
+  if (!component?.variants?.length) return null;
+  return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
+}
+
+// src/lib/spec-hash.mjs
+import { createHash } from "node:crypto";
+function stableStringify(value) {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.keys(value).sort().map((k) => `${JSON.stringify(k)}:${stableStringify(value[k])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+function collectRefs(section) {
+  const tokens = /* @__PURE__ */ new Set();
+  const components = /* @__PURE__ */ new Set();
+  const assets = /* @__PURE__ */ new Set();
+  const visit = (node) => {
+    if (!node || typeof node !== "object") return;
+    for (const key of ["spacing", "background", "style"]) if (typeof node[key] === "string") tokens.add(node[key]);
+    if (node.layout?.gap) tokens.add(node.layout.gap);
+    if (node.type === "component") components.add(node.ref);
+    if (node.type === "button") components.add("button");
+    if (node.asset) assets.add(node.asset);
+    for (const child of node.children ?? []) visit(child);
+  };
+  visit(section);
+  return { tokens: [...tokens].sort(), components: [...components].sort(), assets: [...assets].sort() };
+}
+function sectionHash(section, spec) {
+  const refs = collectRefs(section);
+  const tokens = new Set(refs.tokens);
+  const payload = {
+    section,
+    colors: spec.tokens.colors.filter((c) => tokens.has(c.name)),
+    typography: spec.tokens.typography.filter((t) => tokens.has(t.name)),
+    spacing: Object.fromEntries(Object.entries(spec.tokens.spacing).filter(([k]) => tokens.has(k))),
+    components: spec.components.components.filter((c) => refs.components.includes(c.name)),
+    assets: spec.assets.assets.filter((a) => refs.assets.includes(a.id))
+  };
+  return `sha256:${createHash("sha256").update(stableStringify(payload)).digest("hex")}`;
+}
+
+// src/lib/plan-section.mjs
+var BREAKPOINTS = ["main", "medium", "small"];
+function escapeHtml(text) {
+  return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+function layoutStyles(cls, layout, spec) {
+  const props = { main: {}, medium: {}, small: {} };
+  const vars = { main: {}, medium: {}, small: {} };
+  if (layout.type === "grid") {
+    props.main.display = "grid";
+    for (const [bp, n] of changedBreakpoints(resolveResponsive(layout.columns ?? 1))) {
+      props[bp]["grid-template-columns"] = `repeat(${n}, minmax(0, 1fr))`;
+    }
+  } else {
+    props.main.display = "flex";
+    props.main["flex-direction"] = layout.type === "stack" ? "column" : layout.direction ?? "row";
+    if (layout.align) props.main["align-items"] = layout.align;
+    if (layout.justify) props.main["justify-content"] = layout.justify;
+  }
+  if (layout.gap) {
+    for (const [bp, { name }] of Object.entries(responsiveVariableNames(layout.gap, spec.tokens.spacing[layout.gap]))) {
+      vars[bp]["row-gap"] = name;
+      vars[bp]["column-gap"] = name;
+    }
+  }
+  return BREAKPOINTS.filter((bp) => bp === "main" || Object.keys(props[bp]).length || Object.keys(vars[bp]).length).map((bp) => ({ class: cls, breakpoint: bp, props: props[bp], variables: vars[bp] }));
+}
+function nextOrder(ctx, cls) {
+  const n = (ctx.counts.get(cls) ?? 0) + 1;
+  ctx.counts.set(cls, n);
+  return n;
+}
+function imageClasses(ctx, ratio) {
+  if (!ctx.imageClasses.has(ratio)) {
+    const n = ctx.imageClasses.size;
+    const suffix = n === 0 ? "" : `-${n + 1}`;
+    const wrapper = `${ctx.section.id}_image-wrapper${suffix}`;
+    const image = `${ctx.section.id}_image${suffix}`;
+    ctx.custom.add(wrapper);
+    ctx.custom.add(image);
+    const wrapperProps = { overflow: "hidden" };
+    if (ratio) wrapperProps["aspect-ratio"] = ratio.replace("/", " / ");
+    ctx.plan.styles.push({ class: wrapper, breakpoint: "main", props: wrapperProps, variables: {} });
+    ctx.plan.styles.push({ class: image, breakpoint: "main", props: { width: "100%", height: "100%", "object-fit": "cover" }, variables: {} });
+    ctx.imageClasses.set(ratio, { wrapper, image });
+  }
+  return ctx.imageClasses.get(ratio);
+}
+function renderButton(child, ctx) {
+  ctx.utilities.add("button");
+  const classes = ["button"];
+  const primary = primaryVariantName(ctx.spec.components.components.find((c) => c.name === "button"));
+  if (child.variant && child.variant !== primary) {
+    classes.push(`is-${child.variant}`);
+    ctx.utilities.add(`is-${child.variant}`);
+  }
+  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}">${escapeHtml(child.text ?? "")}</a>`;
+}
+function withSurface(cls, surface, ctx) {
+  if (!surface) return cls;
+  ctx.utilities.add(`surface-${surface}`);
+  return `${cls} surface-${surface}`;
+}
+function renderChild(child, ctx) {
+  const id = ctx.section.id;
+  switch (child.type) {
+    case "heading": {
+      const cls = `heading-style-${child.style.split(".")[1]}`;
+      ctx.utilities.add(cls);
+      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
+    }
+    case "text": {
+      const cls = `text-size-${child.style.split(".")[1]}`;
+      ctx.utilities.add(cls);
+      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
+    }
+    case "rich-text": {
+      ctx.utilities.add("text-rich-text");
+      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${escapeHtml(p.trim())}</p>`).join("");
+      return `<div class="text-rich-text">${paragraphs}</div>`;
+    }
+    case "image": {
+      const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
+      ctx.plan.assets.push({ id: child.asset, kind: "raster", alt: child.alt, targetClass: image, order: nextOrder(ctx, image) });
+      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"></div>`;
+    }
+    case "svg": {
+      const cls = `${id}_icon`;
+      ctx.custom.add(cls);
+      ctx.plan.assets.push({ id: child.asset, kind: "svg", alt: child.alt ?? "", targetClass: cls, order: nextOrder(ctx, cls) });
+      return `<div class="${cls}"></div>`;
+    }
+    case "link": {
+      const cls = `${id}_link`;
+      ctx.custom.add(cls);
+      return `<a class="${cls}" href="${escapeHtml(child.href)}">${escapeHtml(child.text)}</a>`;
+    }
+    case "button":
+      return renderButton(child, ctx);
+    case "list": {
+      const list = `${id}_list`;
+      const item = `${id}_list-item`;
+      ctx.custom.add(list);
+      ctx.custom.add(item);
+      return `<ul class="${list}">${child.items.map((t) => `<li class="${item}">${escapeHtml(t)}</li>`).join("")}</ul>`;
+    }
+    case "group": {
+      const cls = `${id}_${child.name}`;
+      ctx.custom.add(cls);
+      if (child.layout) ctx.plan.styles.push(...layoutStyles(cls, child.layout, ctx.spec));
+      return `<div class="${withSurface(cls, child.surface, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
+    }
+    case "component": {
+      if (child.ref === "button") return renderButton(child, ctx);
+      const cls = `${id}_${child.ref}-slot`;
+      ctx.custom.add(cls);
+      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props: child.props ?? {}, targetClass: cls, order: nextOrder(ctx, cls) });
+      return `<div class="${cls}"></div>`;
+    }
+    case "form":
+    case "embed-placeholder": {
+      const cls = `${id}_${child.type}`;
+      ctx.custom.add(cls);
+      ctx.plan.placeholders.push({ type: child.type, targetClass: cls, order: nextOrder(ctx, cls), description: child.description });
+      return `<div class="${cls}"></div>`;
+    }
+    default:
+      throw new Error(`unsupported child type "${child.type}"`);
+  }
+}
+function planSection(spec, pageSlug, sectionId) {
+  const page = spec.pages[pageSlug];
+  if (!page) throw new Error(`unknown page "${pageSlug}"`);
+  const section = page.sections.find((s) => s.id === sectionId);
+  if (!section) throw new Error(`unknown section "${sectionId}" in page "${pageSlug}"`);
+  const plan = {
+    page: pageSlug,
+    section: section.id,
+    specHash: sectionHash(section, spec),
+    classesToCreate: [],
+    utilitiesUsed: [],
+    whtml: "",
+    styles: [],
+    assets: [],
+    components: [],
+    interactions: [],
+    placeholders: []
+  };
+  const ctx = { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
+  const sectionClass = `section_${section.id}`;
+  const componentClass = `${section.id}_component`;
+  ctx.custom.add(sectionClass);
+  ctx.custom.add(componentClass);
+  ctx.utilities.add("padding-global");
+  if (section.background) {
+    plan.styles.push({ class: sectionClass, breakpoint: "main", props: {}, variables: { "background-color": variableName(section.background) } });
+  }
+  if (section.layout) plan.styles.push(...layoutStyles(componentClass, section.layout, spec));
+  let inner = section.children.map((child) => renderChild(child, ctx)).join("");
+  if (section.needsCodeComponent) {
+    const slot = `${section.id}_code-component-slot`;
+    ctx.custom.add(slot);
+    inner += `<div class="${slot}"></div>`;
+    plan.placeholders.push({
+      type: "code-component",
+      targetClass: slot,
+      order: nextOrder(ctx, slot),
+      description: section.notes?.interaction ?? `code component for section ${section.id}`
+    });
+  } else if (section.notes?.interaction) {
+    plan.interactions.push({ note: section.notes.interaction, targetClass: sectionClass });
+  }
+  let body = `<div class="${componentClass}">${inner}</div>`;
+  if (section.spacing) {
+    const cls = `padding-section-${section.spacing.split(".")[1]}`;
+    ctx.utilities.add(cls);
+    body = `<div class="${cls}">${body}</div>`;
+  }
+  if (section.container) {
+    const cls = `container-${section.container}`;
+    ctx.utilities.add(cls);
+    body = `<div class="${cls}">${body}</div>`;
+  }
+  plan.whtml = `<section class="${withSurface(sectionClass, section.surface, ctx)}"><div class="padding-global">${body}</div></section>`;
+  plan.classesToCreate = [...ctx.custom];
+  plan.utilitiesUsed = [...ctx.utilities].sort();
+  return plan;
+}
 
 // src/lib/qa-structural.mjs
 function tokenValueIndex(spec) {
@@ -7527,6 +7780,12 @@ function checkStructure(spec, pageSlug, dump) {
   }
   const headings = [];
   for (const section of dumpSections) {
+    if (page.sections.some((s) => s.id === section.id)) {
+      const plan = planSection(spec, pageSlug, section.id);
+      for (const cls of [...plan.classesToCreate, ...plan.utilitiesUsed]) {
+        if (!(section.classes ?? []).includes(cls)) add("high", `class "${cls}" from plan not found in Webflow`, section.id);
+      }
+    }
     for (const cls of section.classes ?? []) {
       const result = validateClassName(cls);
       if (!result.ok) add("high", `invalid class "${cls}": ${result.reason}`, section.id);

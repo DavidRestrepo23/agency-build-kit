@@ -44,6 +44,7 @@ surfaces:
 
 - Every property is optional, but a surface needs at least one.
 - A section uses either `background` or `surface`, never both.
+- A surface with `radius` also gets `overflow: hidden`, which clips child shadows, focus rings and dropdowns and breaks `position: sticky` inside it. Put radius on the card group, not on whole sections or grids, unless that clipping is wanted.
 - Name every repeated card/badge/panel style; a box style used once still gets a surface.
 
 ## Raster exceptions

@@ -6,16 +6,22 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadSpec } from '../src/lib/load-spec.mjs';
 import { checkStructure } from '../src/lib/qa-structural.mjs';
+import { planSection } from '../src/lib/plan-section.mjs';
 import { VALID_SPEC } from './helpers.mjs';
 
 const spec = loadSpec(VALID_SPEC);
+
+function plannedClasses(id) {
+  const plan = planSection(spec, 'home', id);
+  return [...plan.classesToCreate, ...plan.utilitiesUsed];
+}
 
 function goodDump() {
   return {
     sections: [
       { id: 'hero', classes: ['section_hero', 'padding-global', 'container-large', 'padding-section-large', 'hero_component', 'heading-style-h1', 'text-size-large', 'button', 'hero_image-wrapper', 'hero_image'], headings: [1], images: [{ alt: 'Dashboard' }], links: [{ href: '#contact' }] },
-      { id: 'features', classes: ['section_features', 'features_grid'], headings: [2], images: [], links: [] },
-      { id: 'calculator', classes: ['section_calculator'], headings: [2], images: [], links: [] },
+      { id: 'features', classes: plannedClasses('features'), headings: [2], images: [], links: [] },
+      { id: 'calculator', classes: plannedClasses('calculator'), headings: [2], images: [], links: [] },
     ],
     styles: [{ name: 'hero_component', breakpoint: 'main', props: { display: 'grid' } }],
   };
@@ -91,4 +97,10 @@ test('final review: section order different from spec is flagged', () => {
   dump.sections = [dump.sections[1], dump.sections[0], dump.sections[2]];
   dump.sections[0].headings = [2];
   assert.ok(checkStructure(spec, 'home', dump).findings.some((f) => f.severity === 'medium' && /order/.test(f.message)));
+});
+
+test('final review 1.1: planned class missing from the built section is high severity', () => {
+  const dump = goodDump();
+  dump.sections[1].classes = dump.sections[1].classes.filter((c) => c !== 'surface-card');
+  assert.ok(checkStructure(spec, 'home', dump).findings.some((f) => f.severity === 'high' && f.section === 'features' && /class "surface-card" from plan not found/.test(f.message)));
 });

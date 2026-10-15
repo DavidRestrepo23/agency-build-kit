@@ -187,3 +187,9 @@ test('scaleApproved: approved raster below 2x is valid, empty reason is not', ()
   editYaml(dir, 'assets/manifest.yaml', (a) => { a.assets[0].scaleApproved = ''; });
   assert.ok(errorsFor(dir).some((e) => e.file === 'assets/manifest.yaml' && e.path === '/assets/0/scaleApproved'));
 });
+
+test('final review 1.1: radius named like an Object prototype key is unknown', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'tokens.yaml', (t) => { t.surfaces.card.radius = 'toString'; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/surfaces/card/radius' && /unknown radius "toString"/.test(e.message)));
+});

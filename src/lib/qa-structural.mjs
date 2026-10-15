@@ -1,6 +1,7 @@
 import { validateClassName } from './class-names.mjs';
 import { pxToRem } from './units.mjs';
 import { resolveResponsive } from './responsive.mjs';
+import { planSection } from './plan-section.mjs';
 
 export function tokenValueIndex(spec) {
   const index = new Map();
@@ -43,6 +44,12 @@ export function checkStructure(spec, pageSlug, dump) {
 
   const headings = [];
   for (const section of dumpSections) {
+    if (page.sections.some((s) => s.id === section.id)) {
+      const plan = planSection(spec, pageSlug, section.id);
+      for (const cls of [...plan.classesToCreate, ...plan.utilitiesUsed]) {
+        if (!(section.classes ?? []).includes(cls)) add('high', `class "${cls}" from plan not found in Webflow`, section.id);
+      }
+    }
     for (const cls of section.classes ?? []) {
       const result = validateClassName(cls);
       if (!result.ok) add('high', `invalid class "${cls}": ${result.reason}`, section.id);

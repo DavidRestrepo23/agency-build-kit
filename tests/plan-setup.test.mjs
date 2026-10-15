@@ -115,3 +115,10 @@ test('surfaces: pill without padding has a single main style', () => {
   assert.equal(pill[0].props['border-top-width'], undefined);
   assert.ok(setup.classes.includes('surface-pill'));
 });
+
+test('final review 1.1: every surface used by a plan exists in the setup classes', () => {
+  for (const section of spec.pages.home.sections) {
+    const plan = planSection(spec, 'home', section.id);
+    for (const cls of plan.utilitiesUsed.filter((u) => u.startsWith('surface-'))) assert.ok(setup.classes.includes(cls), cls);
+  }
+});

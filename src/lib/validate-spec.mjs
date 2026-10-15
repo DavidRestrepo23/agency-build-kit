@@ -50,7 +50,7 @@ function crossReferenceErrors(spec) {
       const token = surface.padding?.[axis];
       if (token && !spacing.has(token)) err('tokens.yaml', `${base}/padding/${axis}`, `unknown spacing token "${token}"`);
     }
-    if (surface.radius !== undefined && !(surface.radius in radii)) err('tokens.yaml', `${base}/radius`, `unknown radius "${surface.radius}"`);
+    if (surface.radius !== undefined && !Object.hasOwn(radii, surface.radius)) err('tokens.yaml', `${base}/radius`, `unknown radius "${surface.radius}"`);
   }
   const checkSurface = (file, path, name) => {
     if (name && !surfaces.has(name)) err(file, `${path}/surface`, `unknown surface "${name}"`);
