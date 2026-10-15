@@ -83,7 +83,7 @@ test('every utility and variable a section plan uses exists in the setup plan', 
 });
 
 test('components to build exclude button', () => {
-  assert.deepEqual(setup.components, ['card']);
+  assert.deepEqual(setup.components, ['card', 'navbar']);
 });
 
 test('CLI outputs ok plan', () => {

@@ -14590,40 +14590,92 @@ var components_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
   $id: "components.schema.json",
   type: "object",
-  required: ["components"],
+  required: [
+    "components"
+  ],
   additionalProperties: false,
   properties: {
     components: {
       type: "array",
       items: {
         type: "object",
-        required: ["name", "figmaNode", "variants"],
+        required: [
+          "name",
+          "figmaNode",
+          "variants"
+        ],
         additionalProperties: false,
         properties: {
-          name: { $ref: "common.schema.json#/definitions/kebab" },
-          figmaNode: { $ref: "common.schema.json#/definitions/figmaNode" },
+          name: {
+            $ref: "common.schema.json#/definitions/kebab"
+          },
+          figmaNode: {
+            $ref: "common.schema.json#/definitions/figmaNode"
+          },
           variants: {
             type: "array",
             minItems: 1,
             items: {
               type: "object",
-              required: ["name"],
+              required: [
+                "name"
+              ],
               additionalProperties: false,
               properties: {
-                name: { $ref: "common.schema.json#/definitions/kebab" },
+                name: {
+                  $ref: "common.schema.json#/definitions/kebab"
+                },
                 styles: {
                   type: "object",
                   additionalProperties: false,
                   properties: {
-                    background: { $ref: "common.schema.json#/definitions/tokenName" },
-                    color: { $ref: "common.schema.json#/definitions/tokenName" },
-                    border: { $ref: "common.schema.json#/definitions/tokenName" }
+                    background: {
+                      $ref: "common.schema.json#/definitions/tokenName"
+                    },
+                    color: {
+                      $ref: "common.schema.json#/definitions/tokenName"
+                    },
+                    border: {
+                      $ref: "common.schema.json#/definitions/tokenName"
+                    }
                   }
                 }
               }
             }
           },
-          props: { type: "array", items: { type: "string" } }
+          props: {
+            type: "array",
+            items: {
+              type: "string"
+            }
+          },
+          tag: {
+            enum: [
+              "div",
+              "nav",
+              "header",
+              "footer"
+            ]
+          },
+          layout: {
+            $ref: "page.schema.json#/definitions/layout"
+          },
+          surface: {
+            $ref: "common.schema.json#/definitions/kebab"
+          },
+          collapse: {
+            enum: [
+              "tablet",
+              "mobile-landscape"
+            ]
+          },
+          children: {
+            type: "array",
+            minItems: 1,
+            items: {
+              $ref: "page.schema.json#/definitions/child"
+            }
+          }
         }
       }
     }
@@ -14758,6 +14810,13 @@ var page_schema_default = {
             "space-between",
             "space-around"
           ]
+        },
+        textAlign: {
+          enum: [
+            "left",
+            "center",
+            "right"
+          ]
         }
       }
     },
@@ -14840,6 +14899,9 @@ var page_schema_default = {
         },
         surface: {
           $ref: "common.schema.json#/definitions/kebab"
+        },
+        color: {
+          $ref: "common.schema.json#/definitions/tokenName"
         }
       },
       allOf: [
@@ -15041,6 +15103,24 @@ var page_schema_default = {
               }
             }
           }
+        },
+        {
+          if: {
+            required: [
+              "color"
+            ]
+          },
+          then: {
+            properties: {
+              type: {
+                enum: [
+                  "heading",
+                  "text",
+                  "rich-text"
+                ]
+              }
+            }
+          }
         }
       ]
     }
@@ -15106,11 +15186,12 @@ var assets_schema_default = {
 var Ajv = import_ajv.default.default ?? import_ajv.default;
 var ajv = new Ajv({ allErrors: true, strict: false });
 ajv.addSchema(common_schema_default);
+ajv.addSchema(page_schema_default);
 var validators = {
   project: ajv.compile(project_schema_default),
   tokens: ajv.compile(tokens_schema_default),
   components: ajv.compile(components_schema_default),
-  page: ajv.compile(page_schema_default),
+  page: ajv.getSchema("page.schema.json"),
   assets: ajv.compile(assets_schema_default)
 };
 var RESERVED_SPACING = /* @__PURE__ */ new Set([
@@ -15191,6 +15272,7 @@ function crossReferenceErrors(spec) {
   };
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
+    if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
     if (child.type === "image" || child.type === "svg") {
       const asset = assets.get(child.asset);
       const expected = child.type === "svg" ? "svg" : "raster";
@@ -15208,6 +15290,22 @@ function crossReferenceErrors(spec) {
     if (child.layout) checkLayout(file, child.layout, `${path}/layout`);
     (child.children ?? []).forEach((c, i) => checkChild(file, c, `${path}/children/${i}`, groupNames));
   };
+  spec.components.components.forEach((component, ci) => {
+    const base = `/components/${ci}`;
+    checkSurface("components.yaml", base, component.surface);
+    checkLayout("components.yaml", component.layout, `${base}/layout`);
+    const groupNames = /* @__PURE__ */ new Set();
+    (component.children ?? []).forEach((child, i) => {
+      if (child.type === "component" && child.ref !== "button") {
+        err("components.yaml", `${base}/children/${i}`, `component "${component.name}" cannot contain other components (only buttons)`);
+        return;
+      }
+      checkChild("components.yaml", child, `${base}/children/${i}`, groupNames);
+    });
+    if (component.collapse && !(component.children ?? []).some((c) => c.type === "group" && c.name === "menu")) {
+      err("components.yaml", `${base}/collapse`, `collapse requires a group named "menu" among the component children`);
+    }
+  });
   const declared = new Set(spec.project.pages.map((p) => p.slug));
   spec.project.pages.forEach((p, i) => {
     if (!spec.pages[p.slug]) err("project.yaml", `/pages/${i}`, `page "${p.slug}" has no pages/${p.slug}.yaml`);

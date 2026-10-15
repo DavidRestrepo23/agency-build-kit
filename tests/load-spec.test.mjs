@@ -10,7 +10,7 @@ test('loads every spec file', () => {
   assert.equal(spec.project.name, 'fixture-site');
   assert.deepEqual(Object.keys(spec.pages), ['home']);
   assert.equal(spec.assets.assets.length, 2);
-  assert.equal(spec.components.components.length, 2);
+  assert.equal(spec.components.components.length, 3);
   assert.equal(spec.buildState, null);
   assert.match(spec.openQuestions, /\[x\]/);
 });

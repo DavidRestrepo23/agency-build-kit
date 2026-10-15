@@ -13,7 +13,7 @@ export function escapeHtml(text) {
     .replaceAll('"', '&quot;');
 }
 
-function layoutStyles(cls, layout, spec) {
+export function layoutStyles(cls, layout, spec) {
   const props = { main: {}, medium: {}, small: {} };
   const vars = { main: {}, medium: {}, small: {} };
   if (layout.type === 'grid') {
@@ -82,20 +82,24 @@ function withTextColor(cls, child, ctx) {
 }
 
 // Stacks the optional text-align-* utility declared on a layout.
-function withTextAlign(cls, layout, ctx) {
+export function withTextAlign(cls, layout, ctx) {
   if (!layout?.textAlign) return cls;
   const utility = `text-align-${layout.textAlign}`;
   ctx.utilities.add(utility);
   return `${cls} ${utility}`;
 }
 
-function withSurface(cls, surface, ctx) {
+export function withSurface(cls, surface, ctx) {
   if (!surface) return cls;
   ctx.utilities.add(`surface-${surface}`);
   return `${cls} surface-${surface}`;
 }
 
-function renderChild(child, ctx) {
+export function createContext(spec, section, plan) {
+  return { spec, section, plan, custom: new Set(), utilities: new Set(), imageClasses: new Map(), counts: new Map() };
+}
+
+export function renderChild(child, ctx) {
   const id = ctx.section.id;
   switch (child.type) {
     case 'heading': {
@@ -182,7 +186,7 @@ export function planSection(spec, pageSlug, sectionId) {
     interactions: [],
     placeholders: [],
   };
-  const ctx = { spec, section, plan, custom: new Set(), utilities: new Set(), imageClasses: new Map(), counts: new Map() };
+  const ctx = createContext(spec, section, plan);
 
   const sectionClass = `section_${section.id}`;
   const componentClass = `${section.id}_component`;

@@ -5,6 +5,7 @@ const TARGETS = [
   ['src/cli/validate-class-names.mjs', ['plugins/webflow-builder/scripts/validate-class-names.mjs']],
   ['src/cli/plan-setup.mjs', ['plugins/webflow-builder/scripts/plan-setup.mjs']],
   ['src/cli/plan-section.mjs', ['plugins/webflow-builder/scripts/plan-section.mjs']],
+  ['src/cli/plan-component.mjs', ['plugins/webflow-builder/scripts/plan-component.mjs']],
   ['src/cli/qa-structural.mjs', ['plugins/webflow-builder/scripts/qa-structural.mjs']],
   ['src/cli/build-state.mjs', ['plugins/webflow-builder/scripts/build-state.mjs']],
 ];

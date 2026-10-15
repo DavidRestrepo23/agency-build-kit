@@ -10,3 +10,19 @@ components:
     variants:
       - { name: default, styles: { background: neutral.white } }
     props: [title, body]
+  - name: navbar
+    figmaNode: "2:20"
+    tag: nav
+    variants:
+      - { name: default }
+    layout: { type: flex, justify: space-between, align: center }
+    collapse: tablet
+    children:
+      - type: group
+        name: menu
+        layout: { type: flex, gap: space.md }
+        children:
+          - { type: link, text: "Inicio", href: "/" }
+          - { type: link, text: "Contacto", href: "#contacto" }
+      - { type: svg, asset: logo }
+      - { type: button, text: "Agendar", href: "#contact" }

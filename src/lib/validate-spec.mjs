@@ -11,11 +11,12 @@ import assetsSchema from '../../plugins/build-core/skills/site-spec/schemas/asse
 const Ajv = AjvModule.default ?? AjvModule;
 const ajv = new Ajv({ allErrors: true, strict: false });
 ajv.addSchema(commonSchema);
+ajv.addSchema(pageSchema);
 const validators = {
   project: ajv.compile(projectSchema),
   tokens: ajv.compile(tokensSchema),
   components: ajv.compile(componentsSchema),
-  page: ajv.compile(pageSchema),
+  page: ajv.getSchema('page.schema.json'),
   assets: ajv.compile(assetsSchema),
 };
 
@@ -117,6 +118,23 @@ function crossReferenceErrors(spec) {
     if (child.layout) checkLayout(file, child.layout, `${path}/layout`);
     (child.children ?? []).forEach((c, i) => checkChild(file, c, `${path}/children/${i}`, groupNames));
   };
+
+  spec.components.components.forEach((component, ci) => {
+    const base = `/components/${ci}`;
+    checkSurface('components.yaml', base, component.surface);
+    checkLayout('components.yaml', component.layout, `${base}/layout`);
+    const groupNames = new Set();
+    (component.children ?? []).forEach((child, i) => {
+      if (child.type === 'component' && child.ref !== 'button') {
+        err('components.yaml', `${base}/children/${i}`, `component "${component.name}" cannot contain other components (only buttons)`);
+        return;
+      }
+      checkChild('components.yaml', child, `${base}/children/${i}`, groupNames);
+    });
+    if (component.collapse && !(component.children ?? []).some((c) => c.type === 'group' && c.name === 'menu')) {
+      err('components.yaml', `${base}/collapse`, `collapse requires a group named "menu" among the component children`);
+    }
+  });
 
   const declared = new Set(spec.project.pages.map((p) => p.slug));
   spec.project.pages.forEach((p, i) => {
