@@ -3,6 +3,8 @@ colors:
   - { name: brand.surface, value: "#F5F7FF", role: background }
   - { name: neutral.white, value: "#FFFFFF", role: background }
   - { name: neutral.black, value: "#0A0A0A", role: text }
+  - { name: neutral.glass, value: "#FFFFFF0D", role: background }
+  - { name: neutral.border-strong, value: "#FFFFFFE6", role: border }
 typography:
   - { name: heading.h1, family: Inter, weight: 700, size: { desktop: 64, mobile: 40 }, lineHeight: 1.1, letterSpacing: -0.02 }
   - { name: heading.h2, family: Inter, weight: 700, size: { desktop: 48, tablet: 40, mobile: 32 }, lineHeight: 1.2 }
@@ -13,7 +15,16 @@ spacing:
   section.medium: { desktop: 80, mobile: 48 }
   space.lg: 32
   space.md: { desktop: 24, mobile: 16 }
-radii: { button: 8 }
+radii: { button: 8, card: 40 }
 shadows: []
 fonts:
   - { family: Inter, weights: [400, 700], source: google }
+surfaces:
+  card:
+    background: neutral.glass
+    border: { color: neutral.border-strong, width: 2 }
+    radius: card
+    padding: { x: space.lg, y: space.md }
+  pill:
+    background: neutral.glass
+    radius: button

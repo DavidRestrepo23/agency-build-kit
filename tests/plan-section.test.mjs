@@ -61,7 +61,7 @@ test('hero: interaction note targets the section', () => {
 
 test('features: group and ordered component slots', () => {
   const plan = planSection(spec, 'home', 'features');
-  assert.ok(plan.whtml.includes('<div class="features_grid"><div class="features_card-slot"></div><div class="features_card-slot"></div></div>'));
+  assert.ok(plan.whtml.includes('<div class="features_grid surface-card"><div class="features_card-slot"></div><div class="features_card-slot"></div></div>'));
   assert.deepEqual(plan.components.map((c) => [c.ref, c.variant, c.order, c.props.title]), [['card', 'default', 1, 'Fast'], ['card', 'default', 2, 'Safe']]);
   const grid = plan.styles.filter((s) => s.class === 'features_grid');
   assert.deepEqual(grid.map((s) => s.breakpoint), ['main', 'medium', 'small']);

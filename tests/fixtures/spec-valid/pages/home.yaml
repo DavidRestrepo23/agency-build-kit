@@ -22,6 +22,7 @@ sections:
       - { type: heading, level: 2, style: heading.h2, text: "Features" }
       - type: group
         name: grid
+        surface: card
         layout: { type: grid, columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: space.md }
         children:
           - { type: component, ref: card, variant: default, props: { title: "Fast", body: "Ships quickly" } }
@@ -30,6 +31,7 @@ sections:
     figmaNode: "1:4"
     spacing: section.medium
     container: medium
+    surface: pill
     needsCodeComponent: true
     notes: { interaction: "live ROI calculation" }
     children:

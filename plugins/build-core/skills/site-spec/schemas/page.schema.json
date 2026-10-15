@@ -2,87 +2,413 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "page.schema.json",
   "type": "object",
-  "required": ["page", "figmaNode", "sections"],
+  "required": [
+    "page",
+    "figmaNode",
+    "sections"
+  ],
   "additionalProperties": false,
   "properties": {
-    "page": { "$ref": "common.schema.json#/definitions/kebab" },
-    "figmaNode": { "$ref": "common.schema.json#/definitions/figmaNode" },
-    "sections": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/section" } }
+    "page": {
+      "$ref": "common.schema.json#/definitions/kebab"
+    },
+    "figmaNode": {
+      "$ref": "common.schema.json#/definitions/figmaNode"
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/section"
+      }
+    }
   },
   "definitions": {
     "section": {
       "type": "object",
-      "required": ["id", "figmaNode", "children"],
+      "required": [
+        "id",
+        "figmaNode",
+        "children"
+      ],
       "additionalProperties": false,
       "properties": {
-        "id": { "$ref": "common.schema.json#/definitions/kebab" },
-        "figmaNode": { "$ref": "common.schema.json#/definitions/figmaNode" },
-        "spacing": { "type": "string", "pattern": "^section\\.(small|medium|large)$" },
-        "container": { "enum": ["small", "medium", "large"] },
-        "background": { "$ref": "common.schema.json#/definitions/tokenName" },
-        "layout": { "$ref": "#/definitions/layout" },
-        "children": { "type": "array", "items": { "$ref": "#/definitions/child" } },
+        "id": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "figmaNode": {
+          "$ref": "common.schema.json#/definitions/figmaNode"
+        },
+        "spacing": {
+          "type": "string",
+          "pattern": "^section\\.(small|medium|large)$"
+        },
+        "container": {
+          "enum": [
+            "small",
+            "medium",
+            "large"
+          ]
+        },
+        "background": {
+          "$ref": "common.schema.json#/definitions/tokenName"
+        },
+        "layout": {
+          "$ref": "#/definitions/layout"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/child"
+          }
+        },
         "notes": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "interaction": { "type": "string" },
-            "responsive": { "type": "string" }
+            "interaction": {
+              "type": "string"
+            },
+            "responsive": {
+              "type": "string"
+            }
           }
         },
-        "needsCodeComponent": { "type": "boolean" }
+        "needsCodeComponent": {
+          "type": "boolean"
+        },
+        "surface": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        }
       }
     },
     "layout": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
-        "type": { "enum": ["grid", "flex", "stack"] },
-        "columns": { "$ref": "common.schema.json#/definitions/responsiveNumber" },
-        "gap": { "$ref": "common.schema.json#/definitions/tokenName" },
-        "direction": { "enum": ["row", "column"] },
-        "align": { "enum": ["flex-start", "center", "flex-end", "stretch", "baseline"] },
-        "justify": { "enum": ["flex-start", "center", "flex-end", "space-between", "space-around"] }
+        "type": {
+          "enum": [
+            "grid",
+            "flex",
+            "stack"
+          ]
+        },
+        "columns": {
+          "$ref": "common.schema.json#/definitions/responsiveNumber"
+        },
+        "gap": {
+          "$ref": "common.schema.json#/definitions/tokenName"
+        },
+        "direction": {
+          "enum": [
+            "row",
+            "column"
+          ]
+        },
+        "align": {
+          "enum": [
+            "flex-start",
+            "center",
+            "flex-end",
+            "stretch",
+            "baseline"
+          ]
+        },
+        "justify": {
+          "enum": [
+            "flex-start",
+            "center",
+            "flex-end",
+            "space-between",
+            "space-around"
+          ]
+        }
       }
     },
     "child": {
       "type": "object",
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": false,
       "properties": {
         "type": {
-          "enum": ["heading", "text", "rich-text", "image", "svg", "link", "button", "list", "group", "component", "form", "embed-placeholder"]
+          "enum": [
+            "heading",
+            "text",
+            "rich-text",
+            "image",
+            "svg",
+            "link",
+            "button",
+            "list",
+            "group",
+            "component",
+            "form",
+            "embed-placeholder"
+          ]
         },
-        "level": { "type": "integer", "minimum": 1, "maximum": 6 },
-        "style": { "$ref": "common.schema.json#/definitions/tokenName" },
-        "text": { "type": "string" },
-        "href": { "type": "string" },
-        "asset": { "$ref": "common.schema.json#/definitions/kebab" },
-        "alt": { "type": "string" },
-        "ratio": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
-        "items": { "type": "array", "items": { "type": "string" } },
-        "name": { "$ref": "common.schema.json#/definitions/kebab" },
-        "layout": { "$ref": "#/definitions/layout" },
-        "children": { "type": "array", "items": { "$ref": "#/definitions/child" } },
-        "ref": { "$ref": "common.schema.json#/definitions/kebab" },
-        "variant": { "$ref": "common.schema.json#/definitions/kebab" },
-        "props": { "type": "object" },
-        "description": { "type": "string" }
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "style": {
+          "$ref": "common.schema.json#/definitions/tokenName"
+        },
+        "text": {
+          "type": "string"
+        },
+        "href": {
+          "type": "string"
+        },
+        "asset": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "alt": {
+          "type": "string"
+        },
+        "ratio": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "name": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "layout": {
+          "$ref": "#/definitions/layout"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/child"
+          }
+        },
+        "ref": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "variant": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "props": {
+          "type": "object"
+        },
+        "description": {
+          "type": "string"
+        },
+        "surface": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        }
       },
       "allOf": [
-        { "if": { "properties": { "type": { "const": "heading" } } }, "then": { "required": ["level", "style", "text"], "properties": { "style": { "pattern": "^heading\\.h[1-6]$" } } } },
-        { "if": { "properties": { "type": { "const": "text" } } }, "then": { "required": ["style", "text"], "properties": { "style": { "pattern": "^text\\." } } } },
-        { "if": { "properties": { "type": { "const": "rich-text" } } }, "then": { "required": ["text"] } },
-        { "if": { "properties": { "type": { "const": "image" } } }, "then": { "required": ["asset", "alt"] } },
-        { "if": { "properties": { "type": { "const": "svg" } } }, "then": { "required": ["asset"] } },
-        { "if": { "properties": { "type": { "const": "link" } } }, "then": { "required": ["text", "href"] } },
-        { "if": { "properties": { "type": { "const": "button" } } }, "then": { "required": ["text", "href"] } },
-        { "if": { "properties": { "type": { "const": "list" } } }, "then": { "required": ["items"] } },
-        { "if": { "properties": { "type": { "const": "group" } } }, "then": { "required": ["name", "children"] } },
-        { "if": { "properties": { "type": { "const": "component" } } }, "then": { "required": ["ref"] } },
-        { "if": { "properties": { "type": { "const": "form" } } }, "then": { "required": ["description"] } },
-        { "if": { "properties": { "type": { "const": "embed-placeholder" } } }, "then": { "required": ["description"] } }
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "heading"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "level",
+              "style",
+              "text"
+            ],
+            "properties": {
+              "style": {
+                "pattern": "^heading\\.h[1-6]$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "style",
+              "text"
+            ],
+            "properties": {
+              "style": {
+                "pattern": "^text\\."
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "rich-text"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "asset",
+              "alt"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "svg"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "asset"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "link"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text",
+              "href"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "button"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "text",
+              "href"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "list"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "items"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "group"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "name",
+              "children"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "component"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "ref"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "form"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "description"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "embed-placeholder"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "description"
+            ]
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "surface"
+            ]
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "const": "group"
+              }
+            }
+          }
+        }
       ]
     }
   }

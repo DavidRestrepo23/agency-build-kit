@@ -2,22 +2,50 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "assets.schema.json",
   "type": "object",
-  "required": ["assets"],
+  "required": [
+    "assets"
+  ],
   "additionalProperties": false,
   "properties": {
     "assets": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["id", "figmaNode", "kind", "file"],
+        "required": [
+          "id",
+          "figmaNode",
+          "kind",
+          "file"
+        ],
         "additionalProperties": false,
         "properties": {
-          "id": { "$ref": "common.schema.json#/definitions/kebab" },
-          "figmaNode": { "$ref": "common.schema.json#/definitions/figmaNode" },
-          "kind": { "enum": ["svg", "raster"] },
-          "file": { "type": "string", "minLength": 1 },
-          "scale": { "type": "integer", "minimum": 1 },
-          "alt": { "type": "string" }
+          "id": {
+            "$ref": "common.schema.json#/definitions/kebab"
+          },
+          "figmaNode": {
+            "$ref": "common.schema.json#/definitions/figmaNode"
+          },
+          "kind": {
+            "enum": [
+              "svg",
+              "raster"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scale": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "alt": {
+            "type": "string"
+          },
+          "scaleApproved": {
+            "type": "string",
+            "minLength": 3
+          }
         }
       }
     }

@@ -134,3 +134,56 @@ test('manifest entry whose file is missing on disk fails', () => {
     JSON.stringify(errorsFor(dir)),
   );
 });
+
+test('surfaces: fixture with surfaces is valid', () => {
+  assert.deepEqual(validateSpec(loadSpec(VALID_SPEC)).errors, []);
+});
+
+test('surfaces: unknown tokens and radius are reported', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'tokens.yaml', (t) => {
+    t.surfaces.card.background = 'brand.missing';
+    t.surfaces.card.border.color = 'brand.nope';
+    t.surfaces.card.padding.x = 'space.huge';
+    t.surfaces.card.radius = 'huge';
+  });
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => e.path === '/surfaces/card/background' && /unknown color token "brand\.missing"/.test(e.message)));
+  assert.ok(errors.some((e) => e.path === '/surfaces/card/border/color' && /unknown color token "brand\.nope"/.test(e.message)));
+  assert.ok(errors.some((e) => e.path === '/surfaces/card/padding/x' && /unknown spacing token "space\.huge"/.test(e.message)));
+  assert.ok(errors.some((e) => e.path === '/surfaces/card/radius' && /unknown radius "huge"/.test(e.message)));
+});
+
+test('surfaces: empty surface and border without width are schema errors', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'tokens.yaml', (t) => { t.surfaces.empty = {}; delete t.surfaces.card.border.width; });
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => e.file === 'tokens.yaml' && e.path === '/surfaces/empty'));
+  assert.ok(errors.some((e) => e.file === 'tokens.yaml' && e.path === '/surfaces/card/border'));
+});
+
+test('surfaces: page references an unknown surface', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[1].surface = 'ghost'; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/sections/1/children/1/surface' && /unknown surface "ghost"/.test(e.message)));
+});
+
+test('surfaces: only groups accept surface', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].children[0].surface = 'card'; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/sections/0/children/0/type'));
+});
+
+test('surfaces: section cannot have background and surface', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].surface = 'card'; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/sections/0' && /cannot have both background and surface/.test(e.message)));
+});
+
+test('scaleApproved: approved raster below 2x is valid, empty reason is not', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'assets/manifest.yaml', (a) => { a.assets[0].scale = 1; a.assets[0].scaleApproved = 'client only has 1x sources'; });
+  assert.deepEqual(errorsFor(dir), []);
+  editYaml(dir, 'assets/manifest.yaml', (a) => { a.assets[0].scaleApproved = ''; });
+  assert.ok(errorsFor(dir).some((e) => e.file === 'assets/manifest.yaml' && e.path === '/assets/0/scaleApproved'));
+});

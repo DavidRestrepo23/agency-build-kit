@@ -40,6 +40,21 @@ function crossReferenceErrors(spec) {
   const spacing = new Set(Object.keys(spec.tokens.spacing));
   const components = new Map(spec.components.components.map((c) => [c.name, c]));
   const assets = new Map(spec.assets.assets.map((a) => [a.id, a]));
+  const surfaces = new Map(Object.entries(spec.tokens.surfaces ?? {}));
+  const radii = spec.tokens.radii ?? {};
+  for (const [name, surface] of surfaces) {
+    const base = `/surfaces/${name}`;
+    if (surface.background && !colors.has(surface.background)) err('tokens.yaml', `${base}/background`, `unknown color token "${surface.background}"`);
+    if (surface.border && !colors.has(surface.border.color)) err('tokens.yaml', `${base}/border/color`, `unknown color token "${surface.border.color}"`);
+    for (const axis of ['x', 'y']) {
+      const token = surface.padding?.[axis];
+      if (token && !spacing.has(token)) err('tokens.yaml', `${base}/padding/${axis}`, `unknown spacing token "${token}"`);
+    }
+    if (surface.radius !== undefined && !(surface.radius in radii)) err('tokens.yaml', `${base}/radius`, `unknown radius "${surface.radius}"`);
+  }
+  const checkSurface = (file, path, name) => {
+    if (name && !surfaces.has(name)) err(file, `${path}/surface`, `unknown surface "${name}"`);
+  };
 
   for (const token of spacing) {
     const [group, name] = token.split('.');
@@ -57,7 +72,7 @@ function crossReferenceErrors(spec) {
   });
 
   spec.assets.assets.forEach((asset, i) => {
-    if (asset.kind === 'raster' && (asset.scale ?? 1) < 2) {
+    if (asset.kind === 'raster' && (asset.scale ?? 1) < 2 && !asset.scaleApproved) {
       err('assets/manifest.yaml', `/assets/${i}`, `raster asset "${asset.id}" must be exported at scale 2 or higher`);
     }
     if (spec.dir && !existsSync(join(spec.dir, 'assets', asset.file))) {
@@ -88,6 +103,7 @@ function crossReferenceErrors(spec) {
     if (child.type === 'component') checkVariant(file, path, child.ref, child.variant);
     if (child.type === 'button') checkVariant(file, path, 'button', child.variant);
     if (child.type === 'group') {
+      checkSurface(file, path, child.surface);
       if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);
       if (groupNames.has(child.name)) err(file, `${path}/name`, `duplicate group name "${child.name}" in section`);
       groupNames.add(child.name);
@@ -112,6 +128,8 @@ function crossReferenceErrors(spec) {
       ids.add(section.id);
       if (section.spacing && !spacing.has(section.spacing)) err(file, `${base}/spacing`, `unknown spacing token "${section.spacing}"`);
       if (section.background && !colors.has(section.background)) err(file, `${base}/background`, `unknown color token "${section.background}"`);
+      checkSurface(file, base, section.surface);
+      if (section.background && section.surface) err(file, base, 'section cannot have both background and surface');
       checkLayout(file, section.layout, `${base}/layout`);
       const groupNames = new Set();
       section.children.forEach((child, i) => checkChild(file, child, `${base}/children/${i}`, groupNames));
