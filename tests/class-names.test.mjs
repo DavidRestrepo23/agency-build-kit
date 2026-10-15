@@ -19,6 +19,8 @@ const VALID = [
   ['margin-lg', 'utility'],
   ['button', 'utility'],
   ['hide-mobile-portrait', 'utility'],
+  ['surface-card', 'utility'],
+  ['surface-cta-panel', 'utility'],
 ];
 
 const INVALID = [
@@ -30,6 +32,8 @@ const INVALID = [
   ['is-', /combo classes/],
   ['hero-image', /not a Client-First utility/],
   ['container-xl', /not a Client-First utility/],
+  ['surface-', /not a Client-First utility/],
+  ['surface_', /single underscore/],
 ];
 
 for (const [name, kind] of VALID) {
