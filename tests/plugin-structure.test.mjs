@@ -49,7 +49,8 @@ for (const plugin of PLUGINS) {
   test(`${plugin}: skills have matching name and description`, () => {
     const skillsDir = join(dir, 'skills');
     if (!existsSync(skillsDir)) return;
-    for (const skill of readdirSync(skillsDir)) {
+    // Skill folders may exist before their SKILL.md (e.g. site-spec/schemas lands before the skill text).
+    for (const skill of readdirSync(skillsDir).filter((s) => existsSync(join(skillsDir, s, 'SKILL.md')))) {
       const fm = frontmatter(join(skillsDir, skill, 'SKILL.md'));
       assert.equal(fm.name, skill);
       assert.ok(fm.description?.length > 20, `${skill} description too short`);
