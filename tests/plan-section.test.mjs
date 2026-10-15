@@ -143,3 +143,8 @@ test('surfaces: hash changes with the assigned surface, not with its definition'
   editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[1].surface = 'pill'; });
   assert.notEqual(planSection(loadSpec(dir), 'home', 'features').specHash, before);
 });
+
+test('e2e A: image wrappers take full width so they do not collapse in centered layouts', () => {
+  const plan = planSection(spec, 'home', 'hero');
+  assert.equal(plan.styles.find((s) => s.class === 'hero_image-wrapper').props.width, '100%');
+});

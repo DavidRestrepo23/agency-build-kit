@@ -53,7 +53,7 @@ function imageClasses(ctx, ratio) {
     const image = `${ctx.section.id}_image${suffix}`;
     ctx.custom.add(wrapper);
     ctx.custom.add(image);
-    const wrapperProps = { overflow: 'hidden' };
+    const wrapperProps = { width: '100%', overflow: 'hidden' };
     if (ratio) wrapperProps['aspect-ratio'] = ratio.replace('/', ' / ');
     ctx.plan.styles.push({ class: wrapper, breakpoint: 'main', props: wrapperProps, variables: {} });
     ctx.plan.styles.push({ class: image, breakpoint: 'main', props: { width: '100%', height: '100%', 'object-fit': 'cover' }, variables: {} });
