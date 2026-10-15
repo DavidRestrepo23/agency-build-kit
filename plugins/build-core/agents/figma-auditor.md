@@ -25,6 +25,8 @@ discovered:
     spacing: {}
   components: []      # same shape as components.yaml entries
   assets: []          # same shape as assets/manifest.yaml entries
+  interactive:        # candidates from the figma-extract "Interactive candidates" table
+    - { section: <id>, group: <name or null>, figmaNode: "<id>", signal: "<what you saw>", guess: "<slider|marquee|...>" }
   questions:
     - "<slug>/<section>: <question>"
 ```
