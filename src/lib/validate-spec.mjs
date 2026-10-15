@@ -99,6 +99,7 @@ function crossReferenceErrors(spec) {
 
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
+    if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
     if (child.type === 'image' || child.type === 'svg') {
       const asset = assets.get(child.asset);
       const expected = child.type === 'svg' ? 'svg' : 'raster';

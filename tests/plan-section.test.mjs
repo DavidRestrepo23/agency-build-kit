@@ -148,3 +148,19 @@ test('e2e A: image wrappers take full width so they do not collapse in centered 
   const plan = planSection(spec, 'home', 'hero');
   assert.equal(plan.styles.find((s) => s.class === 'hero_image-wrapper').props.width, '100%');
 });
+
+test('e2e B: text color and layout textAlign become stacked utilities', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[0].layout.textAlign = 'center';
+    p.sections[0].children[1].color = 'neutral-black'.replace('-', '.');
+    p.sections[1].children[1].layout.textAlign = 'left';
+  });
+  const hero = planSection(loadSpec(dir), 'home', 'hero');
+  assert.ok(hero.whtml.includes('<div class="hero_component text-align-center">'), hero.whtml);
+  assert.ok(hero.whtml.includes('<p class="text-size-large text-color-neutral-black">'));
+  assert.ok(hero.utilitiesUsed.includes('text-align-center'));
+  assert.ok(hero.utilitiesUsed.includes('text-color-neutral-black'));
+  const features = planSection(loadSpec(dir), 'home', 'features');
+  assert.ok(features.whtml.includes('<div class="features_grid surface-card text-align-left">'));
+});

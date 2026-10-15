@@ -125,6 +125,13 @@
             "space-between",
             "space-around"
           ]
+        },
+        "textAlign": {
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ]
         }
       }
     },
@@ -207,6 +214,9 @@
         },
         "surface": {
           "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "color": {
+          "$ref": "common.schema.json#/definitions/tokenName"
         }
       },
       "allOf": [
@@ -405,6 +415,24 @@
             "properties": {
               "type": {
                 "const": "group"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "color"
+            ]
+          },
+          "then": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "heading",
+                  "text",
+                  "rich-text"
+                ]
               }
             }
           }

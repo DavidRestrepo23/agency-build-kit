@@ -73,6 +73,22 @@ function renderButton(child, ctx) {
   return `<a class="${classes.join(' ')}" href="${escapeHtml(child.href ?? '#')}">${escapeHtml(child.text ?? '')}</a>`;
 }
 
+// Stacks the optional text color utility (Client-First text-color-*) on text-like children.
+function withTextColor(cls, child, ctx) {
+  if (!child.color) return cls;
+  const utility = `text-color-${variableName(child.color)}`;
+  ctx.utilities.add(utility);
+  return `${cls} ${utility}`;
+}
+
+// Stacks the optional text-align-* utility declared on a layout.
+function withTextAlign(cls, layout, ctx) {
+  if (!layout?.textAlign) return cls;
+  const utility = `text-align-${layout.textAlign}`;
+  ctx.utilities.add(utility);
+  return `${cls} ${utility}`;
+}
+
 function withSurface(cls, surface, ctx) {
   if (!surface) return cls;
   ctx.utilities.add(`surface-${surface}`);
@@ -85,17 +101,17 @@ function renderChild(child, ctx) {
     case 'heading': {
       const cls = `heading-style-${child.style.split('.')[1]}`;
       ctx.utilities.add(cls);
-      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
+      return `<h${child.level} class="${withTextColor(cls, child, ctx)}">${escapeHtml(child.text)}</h${child.level}>`;
     }
     case 'text': {
       const cls = `text-size-${child.style.split('.')[1]}`;
       ctx.utilities.add(cls);
-      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
+      return `<p class="${withTextColor(cls, child, ctx)}">${escapeHtml(child.text)}</p>`;
     }
     case 'rich-text': {
       ctx.utilities.add('text-rich-text');
       const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${escapeHtml(p.trim())}</p>`).join('');
-      return `<div class="text-rich-text">${paragraphs}</div>`;
+      return `<div class="${withTextColor('text-rich-text', child, ctx)}">${paragraphs}</div>`;
     }
     case 'image': {
       const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
@@ -126,7 +142,7 @@ function renderChild(child, ctx) {
       const cls = `${id}_${child.name}`;
       ctx.custom.add(cls);
       if (child.layout) ctx.plan.styles.push(...layoutStyles(cls, child.layout, ctx.spec));
-      return `<div class="${withSurface(cls, child.surface, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join('')}</div>`;
+      return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join('')}</div>`;
     }
     case 'component': {
       if (child.ref === 'button') return renderButton(child, ctx);
@@ -194,7 +210,7 @@ export function planSection(spec, pageSlug, sectionId) {
     plan.interactions.push({ note: section.notes.interaction, targetClass: sectionClass });
   }
 
-  let body = `<div class="${componentClass}">${inner}</div>`;
+  let body = `<div class="${withTextAlign(componentClass, section.layout, ctx)}">${inner}</div>`;
   if (section.spacing) {
     const cls = `padding-section-${section.spacing.split('.')[1]}`;
     ctx.utilities.add(cls);

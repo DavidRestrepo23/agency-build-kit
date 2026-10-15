@@ -201,3 +201,18 @@ test('page: unknown base tokens are reported', () => {
   assert.ok(errors.some((e) => e.path === '/page/background' && /unknown color token "brand\.missing"/.test(e.message)));
   assert.ok(errors.some((e) => e.path === '/page/text' && /unknown typography token "text\.huge"/.test(e.message)));
 });
+
+test('e2e B: child color must be a known color token on text-like children only', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].children[1].color = 'brand.nope'; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/sections/0/children/1/color' && /unknown color token "brand\.nope"/.test(e.message)));
+  const dir2 = copyFixture();
+  editYaml(dir2, 'pages/home.yaml', (p) => { p.sections[0].children[3].color = 'neutral.black'; });
+  assert.ok(errorsFor(dir2).some((e) => e.path === '/sections/0/children/3/type'));
+});
+
+test('e2e B: layout textAlign accepts only left, center, right', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].layout.textAlign = 'justify'; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/sections/0/layout/textAlign'));
+});
