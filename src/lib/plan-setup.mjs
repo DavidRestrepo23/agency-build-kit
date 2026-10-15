@@ -92,6 +92,38 @@ export function planSetup(spec) {
   style('hide-mobile-landscape', 'small', { display: 'none' });
   style('hide-mobile-portrait', 'tiny', { display: 'none' });
 
+  for (const [name, surface] of Object.entries(spec.tokens.surfaces ?? {})) {
+    const cls = `surface-${name}`;
+    const props = {};
+    const vars = {};
+    if (surface.background) vars['background-color'] = variableName(surface.background);
+    if (surface.border) {
+      for (const side of SIDES) {
+        props[`border-${side}-width`] = `${surface.border.width}px`;
+        props[`border-${side}-style`] = 'solid';
+        vars[`border-${side}-color`] = variableName(surface.border.color);
+      }
+    }
+    if (surface.radius !== undefined) {
+      for (const corner of ['top-left', 'top-right', 'bottom-right', 'bottom-left']) {
+        props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
+      }
+      props.overflow = 'hidden';
+    }
+    const padding = { main: {}, medium: {}, small: {} };
+    for (const [axis, sides] of [['y', ['top', 'bottom']], ['x', ['left', 'right']]]) {
+      const token = surface.padding?.[axis];
+      if (!token) continue;
+      for (const [bp, { name: variable }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
+        for (const side of sides) padding[bp][`padding-${side}`] = variable;
+      }
+    }
+    style(cls, 'main', props, { ...vars, ...padding.main });
+    for (const bp of ['medium', 'small']) {
+      if (Object.keys(padding[bp]).length) style(cls, bp, {}, padding[bp]);
+    }
+  }
+
   const button = spec.components.components.find((c) => c.name === 'button');
   if (button) {
     const base = {

@@ -14,6 +14,7 @@ const vars = (collection) => setup.variables.filter((v) => v.collection === coll
 test('color variables keep hex values', () => {
   assert.deepEqual(vars('Colors'), [
     ['brand-primary', '#1F4BFF'], ['brand-surface', '#F5F7FF'], ['neutral-white', '#FFFFFF'], ['neutral-black', '#0A0A0A'],
+    ['neutral-glass', '#FFFFFF0D'], ['neutral-border-strong', '#FFFFFFE6'],
   ]);
 });
 
@@ -89,4 +90,28 @@ test('CLI outputs ok plan', () => {
   const run = spawnSync(process.execPath, ['src/cli/plan-setup.mjs', VALID_SPEC], { encoding: 'utf8' });
   assert.equal(run.status, 0);
   assert.equal(JSON.parse(run.stdout).ok, true);
+});
+
+test('surfaces: card gets background, borders, radius and responsive padding', () => {
+  const card = setup.styles.filter((s) => s.class === 'surface-card');
+  assert.deepEqual(card.map((s) => s.breakpoint), ['main', 'small']);
+  const main = card[0];
+  assert.equal(main.variables['background-color'], 'neutral-glass');
+  assert.equal(main.props['border-top-width'], '2px');
+  assert.equal(main.props['border-left-style'], 'solid');
+  assert.equal(main.variables['border-right-color'], 'neutral-border-strong');
+  assert.equal(main.props['border-top-left-radius'], '2.5rem');
+  assert.equal(main.props.overflow, 'hidden');
+  assert.equal(main.variables['padding-left'], 'space-lg');
+  assert.equal(main.variables['padding-top'], 'space-md');
+  assert.deepEqual(card[1].props, {});
+  assert.deepEqual(card[1].variables, { 'padding-top': 'space-md-mobile', 'padding-bottom': 'space-md-mobile' });
+});
+
+test('surfaces: pill without padding has a single main style', () => {
+  const pill = setup.styles.filter((s) => s.class === 'surface-pill');
+  assert.equal(pill.length, 1);
+  assert.equal(pill[0].props['border-top-left-radius'], '0.5rem');
+  assert.equal(pill[0].props['border-top-width'], undefined);
+  assert.ok(setup.classes.includes('surface-pill'));
 });
