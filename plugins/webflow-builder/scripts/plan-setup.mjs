@@ -14277,6 +14277,8 @@ function loadSpec(dir) {
 
 // src/lib/validate-spec.mjs
 var import_ajv = __toESM(require_ajv(), 1);
+import { existsSync as existsSync2 } from "node:fs";
+import { join as join2 } from "node:path";
 
 // plugins/build-core/skills/site-spec/schemas/common.schema.json
 var common_schema_default = {
@@ -14645,6 +14647,9 @@ function crossReferenceErrors(spec) {
   spec.assets.assets.forEach((asset, i) => {
     if (asset.kind === "raster" && (asset.scale ?? 1) < 2) {
       err("assets/manifest.yaml", `/assets/${i}`, `raster asset "${asset.id}" must be exported at scale 2 or higher`);
+    }
+    if (spec.dir && !existsSync2(join2(spec.dir, "assets", asset.file))) {
+      err("assets/manifest.yaml", `/assets/${i}/file`, `asset file "${asset.file}" not found in assets/`);
     }
   });
   const checkVariant = (file, path, ref, variant) => {

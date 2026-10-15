@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cpSync, writeFileSync } from 'node:fs';
+import { cpSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadSpec } from '../src/lib/load-spec.mjs';
 import { validateSpec } from '../src/lib/validate-spec.mjs';
@@ -124,4 +124,13 @@ test('final review: group names that collide with generated classes are rejected
     editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[1].name = name; });
     assert.ok(errorsFor(dir).some((e) => e.path === '/sections/1/children/1/name' && /reserved/.test(e.message)), name);
   }
+});
+
+test('manifest entry whose file is missing on disk fails', () => {
+  const dir = copyFixture();
+  rmSync(join(dir, 'assets/logo.svg'));
+  assert.ok(
+    errorsFor(dir).some((e) => e.file === 'assets/manifest.yaml' && e.path === '/assets/1/file' && /logo\.svg.*not found/.test(e.message)),
+    JSON.stringify(errorsFor(dir)),
+  );
 });

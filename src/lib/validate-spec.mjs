@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import AjvModule from 'ajv';
 import commonSchema from '../../plugins/build-core/skills/site-spec/schemas/common.schema.json' with { type: 'json' };
 import projectSchema from '../../plugins/build-core/skills/site-spec/schemas/project.schema.json' with { type: 'json' };
@@ -57,6 +59,9 @@ function crossReferenceErrors(spec) {
   spec.assets.assets.forEach((asset, i) => {
     if (asset.kind === 'raster' && (asset.scale ?? 1) < 2) {
       err('assets/manifest.yaml', `/assets/${i}`, `raster asset "${asset.id}" must be exported at scale 2 or higher`);
+    }
+    if (spec.dir && !existsSync(join(spec.dir, 'assets', asset.file))) {
+      err('assets/manifest.yaml', `/assets/${i}/file`, `asset file "${asset.file}" not found in assets/`);
     }
   });
 
