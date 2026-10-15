@@ -1,0 +1,7 @@
+name: fixture-site
+figma: { fileKey: "FIXTURE123", url: "https://www.figma.com/design/FIXTURE123/fixture" }
+platforms: [webflow]
+units: rem
+breakpoints: { desktop: 1440, tablet: 991, mobileLandscape: 767, mobile: 478 }
+pages:
+  - { slug: home, figmaNode: "1:1" }

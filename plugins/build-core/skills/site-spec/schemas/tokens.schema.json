@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "tokens.schema.json",
+  "type": "object",
+  "required": ["colors", "typography", "spacing", "fonts"],
+  "additionalProperties": false,
+  "properties": {
+    "colors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "common.schema.json#/definitions/tokenName" },
+          "value": { "type": "string", "pattern": "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" },
+          "figmaVar": { "type": "string" },
+          "role": { "enum": ["brand", "text", "background", "border", "accent", "state"] }
+        }
+      }
+    },
+    "typography": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "family", "weight", "size", "lineHeight"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "pattern": "^(heading\\.h[1-6]|text\\.[a-z0-9]+(-[a-z0-9]+)*)$" },
+          "family": { "type": "string", "minLength": 1 },
+          "weight": { "type": "integer", "minimum": 100, "maximum": 900 },
+          "size": { "$ref": "common.schema.json#/definitions/responsiveNumber" },
+          "lineHeight": { "type": "number" },
+          "letterSpacing": { "type": "number" },
+          "figmaVar": { "type": "string" }
+        }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "propertyNames": { "pattern": "^(section\\.(small|medium|large)|space\\.[a-z0-9]+(-[a-z0-9]+)*)$" },
+      "additionalProperties": { "$ref": "common.schema.json#/definitions/responsiveNumber" }
+    },
+    "radii": { "type": "object", "additionalProperties": { "type": "number" } },
+    "shadows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "$ref": "common.schema.json#/definitions/tokenName" },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "fonts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["family", "weights", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "family": { "type": "string", "minLength": 1 },
+          "weights": { "type": "array", "minItems": 1, "items": { "type": "integer" } },
+          "source": { "enum": ["google", "upload"] },
+          "files": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+page: home
+figmaNode: "1:1"
+sections:
+  - id: hero
+    figmaNode: "1:2"
+    spacing: section.large
+    container: large
+    background: brand.surface
+    layout: { type: grid, columns: { desktop: 2, tablet: 1 }, gap: space.lg }
+    children:
+      - { type: heading, level: 1, style: heading.h1, text: "Grow faster & smarter" }
+      - { type: text, style: text.large, text: "Built for <teams> that ship." }
+      - { type: component, ref: button, variant: primary, text: "Book a demo", href: "#contact" }
+      - { type: image, asset: hero-mockup, alt: "Dashboard", ratio: "4/3" }
+    notes: { interaction: "fade-up on load", responsive: "image below text on tablet" }
+  - id: features
+    figmaNode: "1:3"
+    spacing: section.medium
+    container: large
+    layout: { type: stack, gap: space.md }
+    children:
+      - { type: heading, level: 2, style: heading.h2, text: "Features" }
+      - type: group
+        name: grid
+        layout: { type: grid, columns: { desktop: 3, tablet: 2, mobile: 1 }, gap: space.md }
+        children:
+          - { type: component, ref: card, variant: default, props: { title: "Fast", body: "Ships quickly" } }
+          - { type: component, ref: card, variant: default, props: { title: "Safe", body: "No surprises" } }
+  - id: calculator
+    figmaNode: "1:4"
+    spacing: section.medium
+    container: medium
+    needsCodeComponent: true
+    notes: { interaction: "live ROI calculation" }
+    children:
+      - { type: heading, level: 2, style: heading.h2, text: "ROI calculator" }

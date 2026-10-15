@@ -1,0 +1,12 @@
+components:
+  - name: button
+    figmaNode: "2:1"
+    variants:
+      - { name: primary, styles: { background: brand.primary, color: neutral.white, border: brand.primary } }
+      - { name: secondary, styles: { background: neutral.white, color: brand.primary, border: brand.primary } }
+    props: [text, href]
+  - name: card
+    figmaNode: "2:10"
+    variants:
+      - { name: default, styles: { background: neutral.white } }
+    props: [title, body]

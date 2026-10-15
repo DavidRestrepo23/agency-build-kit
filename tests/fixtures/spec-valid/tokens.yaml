@@ -1,0 +1,19 @@
+colors:
+  - { name: brand.primary, value: "#1F4BFF", role: brand }
+  - { name: brand.surface, value: "#F5F7FF", role: background }
+  - { name: neutral.white, value: "#FFFFFF", role: background }
+  - { name: neutral.black, value: "#0A0A0A", role: text }
+typography:
+  - { name: heading.h1, family: Inter, weight: 700, size: { desktop: 64, mobile: 40 }, lineHeight: 1.1, letterSpacing: -0.02 }
+  - { name: heading.h2, family: Inter, weight: 700, size: { desktop: 48, tablet: 40, mobile: 32 }, lineHeight: 1.2 }
+  - { name: text.large, family: Inter, weight: 400, size: { desktop: 20, mobile: 18 }, lineHeight: 1.5 }
+  - { name: text.regular, family: Inter, weight: 400, size: 16, lineHeight: 1.5 }
+spacing:
+  section.large: { desktop: 128, mobile: 64 }
+  section.medium: { desktop: 80, mobile: 48 }
+  space.lg: 32
+  space.md: { desktop: 24, mobile: 16 }
+radii: { button: 8 }
+shadows: []
+fonts:
+  - { family: Inter, weights: [400, 700], source: google }

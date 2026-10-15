@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "common.schema.json",
+  "definitions": {
+    "kebab": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+    "tokenName": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*(\\.[a-z0-9]+(-[a-z0-9]+)*)+$" },
+    "figmaNode": { "type": "string", "pattern": "^[0-9]+[:-][0-9]+$" },
+    "responsiveNumber": {
+      "oneOf": [
+        { "type": "number" },
+        {
+          "type": "object",
+          "required": ["desktop"],
+          "additionalProperties": false,
+          "properties": {
+            "desktop": { "type": "number" },
+            "tablet": { "type": "number" },
+            "mobile": { "type": "number" }
+          }
+        }
+      ]
+    }
+  }
+}
