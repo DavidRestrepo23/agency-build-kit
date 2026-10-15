@@ -64,3 +64,14 @@ test('CLI rejects unknown command', () => {
   const run = spawnSync(process.execPath, ['src/cli/build-state.mjs', 'nope', copyFixture()], { encoding: 'utf8' });
   assert.equal(run.status, 1);
 });
+
+test('final review: CLI rejects set-section without page or section', () => {
+  const dir = copyFixture();
+  const run = spawnSync(process.execPath, ['src/cli/build-state.mjs', 'set-section', dir, '--status', 'built'], { encoding: 'utf8' });
+  assert.equal(run.status, 1);
+  assert.match(JSON.parse(run.stdout).errors[0].message, /--page and --section are required/);
+});
+
+test('final review: setup status is restricted', () => {
+  assert.throws(() => setSetupState({}, { platform: 'webflow', siteId: 's', status: 'bogus' }), /invalid setup status "bogus"/);
+});

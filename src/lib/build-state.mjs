@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 export const SECTION_STATUSES = ['pending', 'built', 'failed', 'qa-pass', 'qa-fail'];
 const UP_TO_DATE = new Set(['built', 'qa-pass']);
+export const SETUP_STATUSES = ['pending', 'done', 'failed'];
 
 export function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId }) {
   if (!SECTION_STATUSES.includes(status)) throw new Error(`invalid status "${status}"`);
@@ -35,6 +36,7 @@ export function setSectionState(state, { platform, page, section, status, specHa
 }
 
 export function setSetupState(state, { platform, siteId, status }) {
+  if (!SETUP_STATUSES.includes(status)) throw new Error(`invalid setup status "${status}"`);
   const platformState = state[platform] ?? {};
   return {
     ...state,

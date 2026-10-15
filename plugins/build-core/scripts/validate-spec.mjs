@@ -14604,7 +14604,19 @@ var validators = {
   page: ajv.compile(page_schema_default),
   assets: ajv.compile(assets_schema_default)
 };
-var RESERVED_SPACING = /* @__PURE__ */ new Set(["top", "bottom", "left", "right", "horizontal", "vertical"]);
+var RESERVED_SPACING = /* @__PURE__ */ new Set([
+  "top",
+  "bottom",
+  "left",
+  "right",
+  "horizontal",
+  "vertical",
+  "global",
+  "section-small",
+  "section-medium",
+  "section-large"
+]);
+var RESERVED_GROUP = /^(component|icon|link|list|list-item|form|embed-placeholder|code-component-slot|image(-wrapper)?(-\d+)?|.+-slot)$/;
 function schemaErrors(file, validate, data) {
   if (validate(data)) return [];
   return validate.errors.map((e) => ({ file, path: e.instancePath || "/", message: e.message }));
@@ -14654,8 +14666,9 @@ function crossReferenceErrors(spec) {
       else if (asset.kind !== expected) err(file, `${path}/asset`, `${child.type} must reference an asset of kind "${expected}", "${child.asset}" is "${asset.kind}"`);
     }
     if (child.type === "component") checkVariant(file, path, child.ref, child.variant);
-    if (child.type === "button" && child.variant) checkVariant(file, path, "button", child.variant);
+    if (child.type === "button") checkVariant(file, path, "button", child.variant);
     if (child.type === "group") {
+      if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);
       if (groupNames.has(child.name)) err(file, `${path}/name`, `duplicate group name "${child.name}" in section`);
       groupNames.add(child.name);
     }

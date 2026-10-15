@@ -102,3 +102,26 @@ test('CLI prints JSON and sets exit code', () => {
   assert.equal(missing.status, 1);
   assert.equal(JSON.parse(missing.stdout).ok, false);
 });
+
+test('final review: spacing names that collide with core utilities are reserved', () => {
+  for (const name of ['global', 'section-small', 'section-medium', 'section-large']) {
+    const dir = copyFixture();
+    editYaml(dir, 'tokens.yaml', (t) => { t.spacing[`space.${name}`] = 8; });
+    assert.ok(errorsFor(dir).some((e) => e.file === 'tokens.yaml' && /reserved/.test(e.message)), name);
+  }
+});
+
+test('final review: button child requires a button component even without variant', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'components.yaml', (c) => { c.components = c.components.filter((x) => x.name !== 'button'); });
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].children[2] = { type: 'button', text: 'Go', href: '#' }; });
+  assert.ok(errorsFor(dir).some((e) => /unknown component "button"/.test(e.message)));
+});
+
+test('final review: group names that collide with generated classes are rejected', () => {
+  for (const name of ['component', 'image', 'image-wrapper', 'icon', 'link', 'list-item', 'card-slot']) {
+    const dir = copyFixture();
+    editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[1].name = name; });
+    assert.ok(errorsFor(dir).some((e) => e.path === '/sections/1/children/1/name' && /reserved/.test(e.message)), name);
+  }
+});

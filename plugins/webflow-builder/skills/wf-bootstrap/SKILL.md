@@ -10,8 +10,10 @@ Before acting, load `webflow-mcp:figma-to-webflow` (official plugin) and read it
 ## Input
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/plan-setup.mjs" site-spec > /tmp/wf-setup-plan.json
+mkdir -p site-spec/.plans && node "${CLAUDE_PLUGIN_ROOT}/scripts/plan-setup.mjs" site-spec > site-spec/.plans/setup.json
 ```
+
+If the output has `ok: false`, report its `errors` and stop — never treat a failed plan as an empty one.
 
 Shape: `{ ok, variables[], fonts[], styles[], classes[], components[] }` (`styles[]` items: `{ class, breakpoint, props, variables, comboOf? }`).
 

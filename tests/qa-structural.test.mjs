@@ -78,3 +78,17 @@ test('CLI reads dump file', () => {
   assert.equal(run.status, 0);
   assert.equal(JSON.parse(run.stdout).ok, true);
 });
+
+test('final review: hard-coded findings are attributed to the section from the class prefix', () => {
+  const dump = goodDump();
+  dump.styles.push({ name: 'hero_component', breakpoint: 'main', props: { 'background-color': '#f5f7ff' } });
+  const finding = checkStructure(spec, 'home', dump).findings.find((f) => /hard-coded/.test(f.message));
+  assert.equal(finding.section, 'hero');
+});
+
+test('final review: section order different from spec is flagged', () => {
+  const dump = goodDump();
+  dump.sections = [dump.sections[1], dump.sections[0], dump.sections[2]];
+  dump.sections[0].headings = [2];
+  assert.ok(checkStructure(spec, 'home', dump).findings.some((f) => f.severity === 'medium' && /order/.test(f.message)));
+});

@@ -9,7 +9,7 @@ Arguments: $ARGUMENTS → `<page> <section-id>`.
 
 1. Read the section in `site-spec/pages/<page>.yaml`; it must have `needsCodeComponent: true` and status `built` (the slot exists). Otherwise stop.
 2. Check the CLI: `webflow --version` must be ≥ 2.0 and Node ≥ 22.13. If missing: `npm install -g @webflow/webflow-cli`, then `webflow auth login` (the developer completes login).
-3. Use the official skills in order: `component-scaffold` (component in the project's `webflow-components/` folder, name `<section-id>`), implement it from the Figma frame (`get_design_context` on the section `figmaNode`) and `notes.interaction`, using Webflow variables names from site-spec tokens as CSS custom properties; then `pre-deploy-check`; then `devlink-command` to import (`webflow devlink import`).
+3. Use the official skills in order: `component-scaffold` (component in the project's `webflow-components/` folder, name `<section-id>`), implement it from the Figma frame (load `figma:figma-design-to-code` first, then `get_design_context` on the section `figmaNode`) and `notes.interaction`, using Webflow variables names from site-spec tokens as CSS custom properties; then `pre-deploy-check`; then `devlink-command` to import (`webflow devlink import`).
 4. Insert an instance of the shared component into `<section-id>_code-component-slot` of the page.
 5. Record `built` again with the same plan `specHash`:
    ```bash

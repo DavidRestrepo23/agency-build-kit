@@ -190,7 +190,7 @@ sections:
     needsCodeComponent: false
 ```
 
-Tipos de hijo permitidos: `heading`, `text`, `rich-text`, `image`, `svg`, `link`, `button`, `list`, `group` (contenedor con `name` kebab-case único en la sección, su propio `layout` y `children`), `component`, `form`, `embed-placeholder`. Nombres de spacing reservados: `space.top|bottom|left|right|horizontal|vertical` (colisionan con utilities Client-First).
+Tipos de hijo permitidos: `heading`, `text`, `rich-text`, `image`, `svg`, `link`, `button`, `list`, `group` (contenedor con `name` kebab-case único en la sección, su propio `layout` y `children`), `component`, `form`, `embed-placeholder`. Nombres de spacing reservados: `space.top|bottom|left|right|horizontal|vertical|global|section-small|section-medium|section-large` (colisionan con utilities Client-First). Nombres de group reservados: `component`, `image`, `image-wrapper`, `icon`, `link`, `list`, `list-item`, `form`, `embed-placeholder` y `*-slot`. El radio del botón sale de `radii.button`.
 
 ### 4.5 `assets/manifest.yaml`
 

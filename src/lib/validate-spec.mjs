@@ -17,7 +17,13 @@ const validators = {
   assets: ajv.compile(assetsSchema),
 };
 
-const RESERVED_SPACING = new Set(['top', 'bottom', 'left', 'right', 'horizontal', 'vertical']);
+// space.<name> becomes margin-<name>/padding-<name>; these names collide with Client-First utilities.
+const RESERVED_SPACING = new Set([
+  'top', 'bottom', 'left', 'right', 'horizontal', 'vertical',
+  'global', 'section-small', 'section-medium', 'section-large',
+]);
+// Group names that would collide with classes planSection generates (<id>_<name>).
+const RESERVED_GROUP = /^(component|icon|link|list|list-item|form|embed-placeholder|code-component-slot|image(-wrapper)?(-\d+)?|.+-slot)$/;
 
 function schemaErrors(file, validate, data) {
   if (validate(data)) return [];
@@ -75,8 +81,9 @@ function crossReferenceErrors(spec) {
       else if (asset.kind !== expected) err(file, `${path}/asset`, `${child.type} must reference an asset of kind "${expected}", "${child.asset}" is "${asset.kind}"`);
     }
     if (child.type === 'component') checkVariant(file, path, child.ref, child.variant);
-    if (child.type === 'button' && child.variant) checkVariant(file, path, 'button', child.variant);
+    if (child.type === 'button') checkVariant(file, path, 'button', child.variant);
     if (child.type === 'group') {
+      if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);
       if (groupNames.has(child.name)) err(file, `${path}/name`, `duplicate group name "${child.name}" in section`);
       groupNames.add(child.name);
     }

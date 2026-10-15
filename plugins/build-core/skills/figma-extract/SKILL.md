@@ -35,7 +35,7 @@ Read the `site-spec` skill first; it defines the output format.
 | Nested frame grouping children | `group` with kebab `name` |
 | Mobile/tablet frames of the same section | responsive values (`columns`, sizes) and `notes.responsive` |
 
-4. Tokens: `get_variable_defs` → colors, spacing, radii; text styles → typography (size per breakpoint when mobile frames exist). Keep `figmaVar` ids.
+4. Tokens: `get_variable_defs` → colors, spacing, radii (store the primary button corner radius as `radii.button`); text styles → typography (size per breakpoint when mobile frames exist). Keep `figmaVar` ids.
 5. Assets: download asset URLs returned by `get_design_context` into `site-spec/assets/`; rasters at 2x. If only a raster exists for a logo/icon, record an open question instead of using it.
 6. Anything ambiguous → an open question line: `- [ ] <section>: <question>`. Typical: placeholder copy repeated, missing mobile frame, unclear interaction, font not available on Google Fonts.
 

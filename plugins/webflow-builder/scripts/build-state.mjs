@@ -22,6 +22,7 @@ import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 var SECTION_STATUSES = ["pending", "built", "failed", "qa-pass", "qa-fail"];
 var UP_TO_DATE = /* @__PURE__ */ new Set(["built", "qa-pass"]);
+var SETUP_STATUSES = ["pending", "done", "failed"];
 function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId }) {
   if (!SECTION_STATUSES.includes(status)) throw new Error(`invalid status "${status}"`);
   const platformState = state[platform] ?? {};
@@ -52,6 +53,7 @@ function setSectionState(state, { platform, page, section, status, specHash, ele
   };
 }
 function setSetupState(state, { platform, siteId, status }) {
+  if (!SETUP_STATUSES.includes(status)) throw new Error(`invalid setup status "${status}"`);
   const platformState = state[platform] ?? {};
   return {
     ...state,
@@ -94,6 +96,9 @@ runCli((argv) => {
   const { values, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
   const [command, specDir = "site-spec"] = positionals;
   const state = readState(specDir);
+  if ((command === "get" || command === "set-section") && (!values.page || !values.section)) {
+    throw new Error("--page and --section are required");
+  }
   if (command === "get") {
     const current = state?.[values.platform]?.pages?.[values.page]?.sections?.[values.section] ?? null;
     return { ok: true, needsBuild: sectionNeedsBuild(state, values.platform, values.page, values.section, values.hash), current };

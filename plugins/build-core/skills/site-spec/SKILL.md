@@ -22,11 +22,11 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 ## Rules
 
 1. **Neutral.** Never write platform class names (`heading-style-h1`, `section_hero`). Use semantic roles: `heading.h1`, `text.large`, `section.large`, `space.md`, `container: large`.
-2. **Token names:** `group.name` lowercase kebab parts (`brand.primary`). Typography: `heading.h1`–`heading.h6` or `text.<size>`. Spacing: `section.small|medium|large` or `space.<size>`; `space.top|bottom|left|right|horizontal|vertical` are reserved.
+2. **Token names:** `group.name` lowercase kebab parts (`brand.primary`). Typography: `heading.h1`–`heading.h6` or `text.<size>`. Spacing: `section.small|medium|large` or `space.<size>`; `space.top|bottom|left|right|horizontal|vertical|global|section-small|section-medium|section-large` are reserved. Radii: use `radii.button` for the button corner radius (other radii keys are informational).
 3. **Responsive values:** a number, or `{ desktop, tablet?, mobile? }`. Missing `tablet` inherits `desktop`; missing `mobile` inherits `tablet`.
-4. **Ids:** section `id`, group `name`, asset `id`, component `name`: lowercase kebab-case, unique in their scope.
+4. **Ids:** section `id`, group `name`, asset `id`, component `name`: lowercase kebab-case, unique in their scope. Group names `component`, `image`, `image-wrapper`, `icon`, `link`, `list`, `list-item`, `form`, `embed-placeholder` and anything ending in `-slot` are reserved.
 5. **Never invent copy.** Placeholder text repeated across instances → add an open question instead.
-6. **Assets:** logos/icons `kind: svg`; photos/mockups `kind: raster` with `scale: 2`.
+6. **Assets:** logos/icons `kind: svg`; photos/mockups `kind: raster` with `scale: 2`. Manifest `file` is a file name relative to `site-spec/assets/` (e.g. `hero-mockup@2x.png`, not `assets/hero-mockup@2x.png`).
 7. **Code components:** set `needsCodeComponent: true` on sections whose behavior native Webflow cannot express (calculators, complex filters, carousels with logic).
 
 ## Child types

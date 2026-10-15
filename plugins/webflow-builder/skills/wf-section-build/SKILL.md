@@ -23,10 +23,10 @@ Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml,
    ```
 2. `query_styles`: every `utilitiesUsed` must already exist (created by `/wf-setup`). Missing → stop: setup is incomplete.
 3. `data_style_tool create_style` for each `classesToCreate` not yet existing.
-4. `data_whtml_builder` with `whtml` (structure only, one call, appended after the previous section inside `main-wrapper` of the target page). Capture returned element ids.
+4. `data_whtml_builder` with `whtml` (structure only, one call) inside `main-wrapper` of the target page, **in spec order**: insert it before the element of the next spec section that already exists (find `section_<nextId>` with `query_elements`); append at the end only when no later section exists yet. Capture returned element ids.
 5. `data_style_tool update_style` for each `styles[]` entry on its breakpoint; bind `variables` with `variable_as_value`.
 6. Assets — for each `assets[]` entry, target the `order`-th element with `targetClass`:
-   - `raster`: `data_assets_tool create_asset` from `site-spec/assets/<file>` (2x), then `set_image_asset` + alt.
+   - `raster`: `data_assets_tool create_asset` from `site-spec/assets/<file>` (manifest `file` is relative to `site-spec/assets/`; 2x), then `set_image_asset` + alt.
    - `svg`: insert an HtmlEmbed inside the target with the cleaned inline SVG (`data_element_tool set_settings`).
 7. Components — for each `components[]` entry, replace the `order`-th `targetClass` slot with an instance of the Webflow component `ref` (variant, props).
 8. Interactions — for each `interactions[]` entry use the official `interactions` skill (IX3) on `targetClass`.
@@ -39,6 +39,7 @@ Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml,
 
 On a failure that persists after one retry:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status failed --error "<tool>: <message>"
+node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status failed --error "<tool>: <message>" --ids <ids captured in step 4, if step 4 ran>
 ```
+Passing the partial ids lets the next `/wf-build` delete them instead of leaving a half-built duplicate.
 then stop.

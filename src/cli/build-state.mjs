@@ -18,6 +18,9 @@ runCli((argv) => {
   const { values, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
   const [command, specDir = 'site-spec'] = positionals;
   const state = readState(specDir);
+  if ((command === 'get' || command === 'set-section') && (!values.page || !values.section)) {
+    throw new Error('--page and --section are required');
+  }
 
   if (command === 'get') {
     const current = state?.[values.platform]?.pages?.[values.page]?.sections?.[values.section] ?? null;

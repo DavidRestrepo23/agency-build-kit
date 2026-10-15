@@ -32,7 +32,7 @@ Run the official `accessibility-audit` skill on the page.
 
 ## 4. Report and state
 
-Write `site-spec/qa/<page>.md`: structural findings, per-section visual diffs (high/medium/low), accessibility findings, unverified items. A section is `qa-pass` when it has no structural findings and no high visual diff; otherwise `qa-fail`:
+Write `site-spec/qa/<page>.md`: structural findings, per-section visual diffs (high/medium/low), accessibility findings, unverified items. A section is `qa-pass` when it has no structural findings with its `section` and no high visual diff without a written justification in the report; otherwise `qa-fail`. Page-level findings (`section: null`, e.g. h1 count or section order) do not fail individual sections but must be listed at the top of the report as blocking for the page:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <id> --status qa-pass

@@ -18,6 +18,12 @@ export function tokenValueIndex(spec) {
   return index;
 }
 
+function sectionOfClass(name, page) {
+  const [folder] = name.split('_');
+  const id = folder === 'section' ? name.slice('section_'.length) : folder;
+  return page.sections.some((s) => s.id === id) ? id : null;
+}
+
 export function checkStructure(spec, pageSlug, dump) {
   const page = spec.pages[pageSlug];
   if (!page) throw new Error(`unknown page "${pageSlug}"`);
@@ -26,6 +32,11 @@ export function checkStructure(spec, pageSlug, dump) {
 
   const dumpSections = dump.sections ?? [];
   const found = new Set(dumpSections.map((s) => s.id));
+  const specOrder = page.sections.map((s) => s.id).filter((id) => found.has(id));
+  const dumpOrder = dumpSections.map((s) => s.id).filter((id) => specOrder.includes(id));
+  if (specOrder.join() !== dumpOrder.join()) {
+    add('medium', `section order in Webflow (${dumpOrder.join(', ')}) differs from spec (${specOrder.join(', ')})`);
+  }
   for (const section of page.sections) {
     if (!found.has(section.id)) add('high', `section "${section.id}" from spec not found in Webflow`, section.id);
   }
@@ -54,7 +65,7 @@ export function checkStructure(spec, pageSlug, dump) {
     if (!style.name?.includes('_')) continue;
     for (const [prop, value] of Object.entries(style.props ?? {})) {
       const token = index.get(String(value).trim().toLowerCase());
-      if (token) add('medium', `${style.name} (${style.breakpoint ?? 'main'}) ${prop}: ${value} is hard-coded; bind variable for token "${token}"`);
+      if (token) add('medium', `${style.name} (${style.breakpoint ?? 'main'}) ${prop}: ${value} is hard-coded; bind variable for token "${token}"`, sectionOfClass(style.name, page));
     }
   }
 
