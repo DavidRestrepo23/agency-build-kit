@@ -72,6 +72,12 @@ function renderButton(child, ctx) {
   return `<a class="${classes.join(' ')}" href="${escapeHtml(child.href ?? '#')}">${escapeHtml(child.text ?? '')}</a>`;
 }
 
+function withSurface(cls, surface, ctx) {
+  if (!surface) return cls;
+  ctx.utilities.add(`surface-${surface}`);
+  return `${cls} surface-${surface}`;
+}
+
 function renderChild(child, ctx) {
   const id = ctx.section.id;
   switch (child.type) {
@@ -119,7 +125,7 @@ function renderChild(child, ctx) {
       const cls = `${id}_${child.name}`;
       ctx.custom.add(cls);
       if (child.layout) ctx.plan.styles.push(...layoutStyles(cls, child.layout, ctx.spec));
-      return `<div class="${cls}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join('')}</div>`;
+      return `<div class="${withSurface(cls, child.surface, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join('')}</div>`;
     }
     case 'component': {
       if (child.ref === 'button') return renderButton(child, ctx);
@@ -198,7 +204,7 @@ export function planSection(spec, pageSlug, sectionId) {
     ctx.utilities.add(cls);
     body = `<div class="${cls}">${body}</div>`;
   }
-  plan.whtml = `<section class="${sectionClass}"><div class="padding-global">${body}</div></section>`;
+  plan.whtml = `<section class="${withSurface(sectionClass, section.surface, ctx)}"><div class="padding-global">${body}</div></section>`;
   plan.classesToCreate = [...ctx.custom];
   plan.utilitiesUsed = [...ctx.utilities].sort();
   return plan;

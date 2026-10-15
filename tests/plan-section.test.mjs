@@ -121,3 +121,25 @@ test('CLI validates the spec before planning', () => {
   assert.equal(bad.status, 1);
   assert.equal(JSON.parse(bad.stdout).ok, false);
 });
+
+test('surfaces: section surface is stacked on the section class', () => {
+  const plan = planSection(spec, 'home', 'calculator');
+  assert.ok(plan.whtml.startsWith('<section class="section_calculator surface-pill">'));
+  assert.ok(plan.utilitiesUsed.includes('surface-pill'));
+  assert.ok(!plan.classesToCreate.includes('surface-pill'));
+});
+
+test('surfaces: group surface is a utility, not a class to create', () => {
+  const plan = planSection(spec, 'home', 'features');
+  assert.ok(plan.utilitiesUsed.includes('surface-card'));
+  assert.ok(!plan.classesToCreate.includes('surface-card'));
+});
+
+test('surfaces: hash changes with the assigned surface, not with its definition', () => {
+  const before = planSection(spec, 'home', 'features').specHash;
+  const dir = copyFixture();
+  editYaml(dir, 'tokens.yaml', (t) => { t.surfaces.card.border.width = 4; });
+  assert.equal(planSection(loadSpec(dir), 'home', 'features').specHash, before);
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[1].surface = 'pill'; });
+  assert.notEqual(planSection(loadSpec(dir), 'home', 'features').specHash, before);
+});

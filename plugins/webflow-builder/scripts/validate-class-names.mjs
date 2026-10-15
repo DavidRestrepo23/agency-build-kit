@@ -35,6 +35,7 @@ var UTILITY_PATTERNS = [
   /^(margin|padding)-[a-z0-9]+(-[a-z0-9]+)*$/,
   /^max-width-(small|medium|large)$/,
   /^hide-(tablet|mobile-landscape|mobile-portrait)$/,
+  /^surface-[a-z0-9]+(-[a-z0-9]+)*$/,
   /^button$/
 ];
 function validateClassName(name) {

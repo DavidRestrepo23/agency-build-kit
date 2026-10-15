@@ -14363,20 +14363,44 @@ var tokens_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
   $id: "tokens.schema.json",
   type: "object",
-  required: ["colors", "typography", "spacing", "fonts"],
+  required: [
+    "colors",
+    "typography",
+    "spacing",
+    "fonts"
+  ],
   additionalProperties: false,
   properties: {
     colors: {
       type: "array",
       items: {
         type: "object",
-        required: ["name", "value"],
+        required: [
+          "name",
+          "value"
+        ],
         additionalProperties: false,
         properties: {
-          name: { $ref: "common.schema.json#/definitions/tokenName" },
-          value: { type: "string", pattern: "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$" },
-          figmaVar: { type: "string" },
-          role: { enum: ["brand", "text", "background", "border", "accent", "state"] }
+          name: {
+            $ref: "common.schema.json#/definitions/tokenName"
+          },
+          value: {
+            type: "string",
+            pattern: "^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+          },
+          figmaVar: {
+            type: "string"
+          },
+          role: {
+            enum: [
+              "brand",
+              "text",
+              "background",
+              "border",
+              "accent",
+              "state"
+            ]
+          }
         }
       }
     },
@@ -14384,34 +14408,74 @@ var tokens_schema_default = {
       type: "array",
       items: {
         type: "object",
-        required: ["name", "family", "weight", "size", "lineHeight"],
+        required: [
+          "name",
+          "family",
+          "weight",
+          "size",
+          "lineHeight"
+        ],
         additionalProperties: false,
         properties: {
-          name: { type: "string", pattern: "^(heading\\.h[1-6]|text\\.[a-z0-9]+(-[a-z0-9]+)*)$" },
-          family: { type: "string", minLength: 1 },
-          weight: { type: "integer", minimum: 100, maximum: 900 },
-          size: { $ref: "common.schema.json#/definitions/responsiveNumber" },
-          lineHeight: { type: "number" },
-          letterSpacing: { type: "number" },
-          figmaVar: { type: "string" }
+          name: {
+            type: "string",
+            pattern: "^(heading\\.h[1-6]|text\\.[a-z0-9]+(-[a-z0-9]+)*)$"
+          },
+          family: {
+            type: "string",
+            minLength: 1
+          },
+          weight: {
+            type: "integer",
+            minimum: 100,
+            maximum: 900
+          },
+          size: {
+            $ref: "common.schema.json#/definitions/responsiveNumber"
+          },
+          lineHeight: {
+            type: "number"
+          },
+          letterSpacing: {
+            type: "number"
+          },
+          figmaVar: {
+            type: "string"
+          }
         }
       }
     },
     spacing: {
       type: "object",
-      propertyNames: { pattern: "^(section\\.(small|medium|large)|space\\.[a-z0-9]+(-[a-z0-9]+)*)$" },
-      additionalProperties: { $ref: "common.schema.json#/definitions/responsiveNumber" }
+      propertyNames: {
+        pattern: "^(section\\.(small|medium|large)|space\\.[a-z0-9]+(-[a-z0-9]+)*)$"
+      },
+      additionalProperties: {
+        $ref: "common.schema.json#/definitions/responsiveNumber"
+      }
     },
-    radii: { type: "object", additionalProperties: { type: "number" } },
+    radii: {
+      type: "object",
+      additionalProperties: {
+        type: "number"
+      }
+    },
     shadows: {
       type: "array",
       items: {
         type: "object",
-        required: ["name", "value"],
+        required: [
+          "name",
+          "value"
+        ],
         additionalProperties: false,
         properties: {
-          name: { $ref: "common.schema.json#/definitions/tokenName" },
-          value: { type: "string" }
+          name: {
+            $ref: "common.schema.json#/definitions/tokenName"
+          },
+          value: {
+            type: "string"
+          }
         }
       }
     },
@@ -14419,13 +14483,86 @@ var tokens_schema_default = {
       type: "array",
       items: {
         type: "object",
-        required: ["family", "weights", "source"],
+        required: [
+          "family",
+          "weights",
+          "source"
+        ],
         additionalProperties: false,
         properties: {
-          family: { type: "string", minLength: 1 },
-          weights: { type: "array", minItems: 1, items: { type: "integer" } },
-          source: { enum: ["google", "upload"] },
-          files: { type: "array", items: { type: "string" } }
+          family: {
+            type: "string",
+            minLength: 1
+          },
+          weights: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "integer"
+            }
+          },
+          source: {
+            enum: [
+              "google",
+              "upload"
+            ]
+          },
+          files: {
+            type: "array",
+            items: {
+              type: "string"
+            }
+          }
+        }
+      }
+    },
+    surfaces: {
+      type: "object",
+      propertyNames: {
+        pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      additionalProperties: {
+        type: "object",
+        minProperties: 1,
+        additionalProperties: false,
+        properties: {
+          background: {
+            $ref: "common.schema.json#/definitions/tokenName"
+          },
+          border: {
+            type: "object",
+            required: [
+              "color",
+              "width"
+            ],
+            additionalProperties: false,
+            properties: {
+              color: {
+                $ref: "common.schema.json#/definitions/tokenName"
+              },
+              width: {
+                type: "integer",
+                minimum: 1
+              }
+            }
+          },
+          radius: {
+            type: "string",
+            minLength: 1
+          },
+          padding: {
+            type: "object",
+            minProperties: 1,
+            additionalProperties: false,
+            properties: {
+              x: {
+                $ref: "common.schema.json#/definitions/tokenName"
+              },
+              y: {
+                $ref: "common.schema.json#/definitions/tokenName"
+              }
+            }
+          }
         }
       }
     }
@@ -14482,87 +14619,413 @@ var page_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
   $id: "page.schema.json",
   type: "object",
-  required: ["page", "figmaNode", "sections"],
+  required: [
+    "page",
+    "figmaNode",
+    "sections"
+  ],
   additionalProperties: false,
   properties: {
-    page: { $ref: "common.schema.json#/definitions/kebab" },
-    figmaNode: { $ref: "common.schema.json#/definitions/figmaNode" },
-    sections: { type: "array", minItems: 1, items: { $ref: "#/definitions/section" } }
+    page: {
+      $ref: "common.schema.json#/definitions/kebab"
+    },
+    figmaNode: {
+      $ref: "common.schema.json#/definitions/figmaNode"
+    },
+    sections: {
+      type: "array",
+      minItems: 1,
+      items: {
+        $ref: "#/definitions/section"
+      }
+    }
   },
   definitions: {
     section: {
       type: "object",
-      required: ["id", "figmaNode", "children"],
+      required: [
+        "id",
+        "figmaNode",
+        "children"
+      ],
       additionalProperties: false,
       properties: {
-        id: { $ref: "common.schema.json#/definitions/kebab" },
-        figmaNode: { $ref: "common.schema.json#/definitions/figmaNode" },
-        spacing: { type: "string", pattern: "^section\\.(small|medium|large)$" },
-        container: { enum: ["small", "medium", "large"] },
-        background: { $ref: "common.schema.json#/definitions/tokenName" },
-        layout: { $ref: "#/definitions/layout" },
-        children: { type: "array", items: { $ref: "#/definitions/child" } },
+        id: {
+          $ref: "common.schema.json#/definitions/kebab"
+        },
+        figmaNode: {
+          $ref: "common.schema.json#/definitions/figmaNode"
+        },
+        spacing: {
+          type: "string",
+          pattern: "^section\\.(small|medium|large)$"
+        },
+        container: {
+          enum: [
+            "small",
+            "medium",
+            "large"
+          ]
+        },
+        background: {
+          $ref: "common.schema.json#/definitions/tokenName"
+        },
+        layout: {
+          $ref: "#/definitions/layout"
+        },
+        children: {
+          type: "array",
+          items: {
+            $ref: "#/definitions/child"
+          }
+        },
         notes: {
           type: "object",
           additionalProperties: false,
           properties: {
-            interaction: { type: "string" },
-            responsive: { type: "string" }
+            interaction: {
+              type: "string"
+            },
+            responsive: {
+              type: "string"
+            }
           }
         },
-        needsCodeComponent: { type: "boolean" }
+        needsCodeComponent: {
+          type: "boolean"
+        },
+        surface: {
+          $ref: "common.schema.json#/definitions/kebab"
+        }
       }
     },
     layout: {
       type: "object",
-      required: ["type"],
+      required: [
+        "type"
+      ],
       additionalProperties: false,
       properties: {
-        type: { enum: ["grid", "flex", "stack"] },
-        columns: { $ref: "common.schema.json#/definitions/responsiveNumber" },
-        gap: { $ref: "common.schema.json#/definitions/tokenName" },
-        direction: { enum: ["row", "column"] },
-        align: { enum: ["flex-start", "center", "flex-end", "stretch", "baseline"] },
-        justify: { enum: ["flex-start", "center", "flex-end", "space-between", "space-around"] }
+        type: {
+          enum: [
+            "grid",
+            "flex",
+            "stack"
+          ]
+        },
+        columns: {
+          $ref: "common.schema.json#/definitions/responsiveNumber"
+        },
+        gap: {
+          $ref: "common.schema.json#/definitions/tokenName"
+        },
+        direction: {
+          enum: [
+            "row",
+            "column"
+          ]
+        },
+        align: {
+          enum: [
+            "flex-start",
+            "center",
+            "flex-end",
+            "stretch",
+            "baseline"
+          ]
+        },
+        justify: {
+          enum: [
+            "flex-start",
+            "center",
+            "flex-end",
+            "space-between",
+            "space-around"
+          ]
+        }
       }
     },
     child: {
       type: "object",
-      required: ["type"],
+      required: [
+        "type"
+      ],
       additionalProperties: false,
       properties: {
         type: {
-          enum: ["heading", "text", "rich-text", "image", "svg", "link", "button", "list", "group", "component", "form", "embed-placeholder"]
+          enum: [
+            "heading",
+            "text",
+            "rich-text",
+            "image",
+            "svg",
+            "link",
+            "button",
+            "list",
+            "group",
+            "component",
+            "form",
+            "embed-placeholder"
+          ]
         },
-        level: { type: "integer", minimum: 1, maximum: 6 },
-        style: { $ref: "common.schema.json#/definitions/tokenName" },
-        text: { type: "string" },
-        href: { type: "string" },
-        asset: { $ref: "common.schema.json#/definitions/kebab" },
-        alt: { type: "string" },
-        ratio: { type: "string", pattern: "^[0-9]+/[0-9]+$" },
-        items: { type: "array", items: { type: "string" } },
-        name: { $ref: "common.schema.json#/definitions/kebab" },
-        layout: { $ref: "#/definitions/layout" },
-        children: { type: "array", items: { $ref: "#/definitions/child" } },
-        ref: { $ref: "common.schema.json#/definitions/kebab" },
-        variant: { $ref: "common.schema.json#/definitions/kebab" },
-        props: { type: "object" },
-        description: { type: "string" }
+        level: {
+          type: "integer",
+          minimum: 1,
+          maximum: 6
+        },
+        style: {
+          $ref: "common.schema.json#/definitions/tokenName"
+        },
+        text: {
+          type: "string"
+        },
+        href: {
+          type: "string"
+        },
+        asset: {
+          $ref: "common.schema.json#/definitions/kebab"
+        },
+        alt: {
+          type: "string"
+        },
+        ratio: {
+          type: "string",
+          pattern: "^[0-9]+/[0-9]+$"
+        },
+        items: {
+          type: "array",
+          items: {
+            type: "string"
+          }
+        },
+        name: {
+          $ref: "common.schema.json#/definitions/kebab"
+        },
+        layout: {
+          $ref: "#/definitions/layout"
+        },
+        children: {
+          type: "array",
+          items: {
+            $ref: "#/definitions/child"
+          }
+        },
+        ref: {
+          $ref: "common.schema.json#/definitions/kebab"
+        },
+        variant: {
+          $ref: "common.schema.json#/definitions/kebab"
+        },
+        props: {
+          type: "object"
+        },
+        description: {
+          type: "string"
+        },
+        surface: {
+          $ref: "common.schema.json#/definitions/kebab"
+        }
       },
       allOf: [
-        { if: { properties: { type: { const: "heading" } } }, then: { required: ["level", "style", "text"], properties: { style: { pattern: "^heading\\.h[1-6]$" } } } },
-        { if: { properties: { type: { const: "text" } } }, then: { required: ["style", "text"], properties: { style: { pattern: "^text\\." } } } },
-        { if: { properties: { type: { const: "rich-text" } } }, then: { required: ["text"] } },
-        { if: { properties: { type: { const: "image" } } }, then: { required: ["asset", "alt"] } },
-        { if: { properties: { type: { const: "svg" } } }, then: { required: ["asset"] } },
-        { if: { properties: { type: { const: "link" } } }, then: { required: ["text", "href"] } },
-        { if: { properties: { type: { const: "button" } } }, then: { required: ["text", "href"] } },
-        { if: { properties: { type: { const: "list" } } }, then: { required: ["items"] } },
-        { if: { properties: { type: { const: "group" } } }, then: { required: ["name", "children"] } },
-        { if: { properties: { type: { const: "component" } } }, then: { required: ["ref"] } },
-        { if: { properties: { type: { const: "form" } } }, then: { required: ["description"] } },
-        { if: { properties: { type: { const: "embed-placeholder" } } }, then: { required: ["description"] } }
+        {
+          if: {
+            properties: {
+              type: {
+                const: "heading"
+              }
+            }
+          },
+          then: {
+            required: [
+              "level",
+              "style",
+              "text"
+            ],
+            properties: {
+              style: {
+                pattern: "^heading\\.h[1-6]$"
+              }
+            }
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "text"
+              }
+            }
+          },
+          then: {
+            required: [
+              "style",
+              "text"
+            ],
+            properties: {
+              style: {
+                pattern: "^text\\."
+              }
+            }
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "rich-text"
+              }
+            }
+          },
+          then: {
+            required: [
+              "text"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "image"
+              }
+            }
+          },
+          then: {
+            required: [
+              "asset",
+              "alt"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "svg"
+              }
+            }
+          },
+          then: {
+            required: [
+              "asset"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "link"
+              }
+            }
+          },
+          then: {
+            required: [
+              "text",
+              "href"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "button"
+              }
+            }
+          },
+          then: {
+            required: [
+              "text",
+              "href"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "list"
+              }
+            }
+          },
+          then: {
+            required: [
+              "items"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "group"
+              }
+            }
+          },
+          then: {
+            required: [
+              "name",
+              "children"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "component"
+              }
+            }
+          },
+          then: {
+            required: [
+              "ref"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "form"
+              }
+            }
+          },
+          then: {
+            required: [
+              "description"
+            ]
+          }
+        },
+        {
+          if: {
+            properties: {
+              type: {
+                const: "embed-placeholder"
+              }
+            }
+          },
+          then: {
+            required: [
+              "description"
+            ]
+          }
+        },
+        {
+          if: {
+            required: [
+              "surface"
+            ]
+          },
+          then: {
+            properties: {
+              type: {
+                const: "group"
+              }
+            }
+          }
+        }
       ]
     }
   }
@@ -14573,22 +15036,50 @@ var assets_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
   $id: "assets.schema.json",
   type: "object",
-  required: ["assets"],
+  required: [
+    "assets"
+  ],
   additionalProperties: false,
   properties: {
     assets: {
       type: "array",
       items: {
         type: "object",
-        required: ["id", "figmaNode", "kind", "file"],
+        required: [
+          "id",
+          "figmaNode",
+          "kind",
+          "file"
+        ],
         additionalProperties: false,
         properties: {
-          id: { $ref: "common.schema.json#/definitions/kebab" },
-          figmaNode: { $ref: "common.schema.json#/definitions/figmaNode" },
-          kind: { enum: ["svg", "raster"] },
-          file: { type: "string", minLength: 1 },
-          scale: { type: "integer", minimum: 1 },
-          alt: { type: "string" }
+          id: {
+            $ref: "common.schema.json#/definitions/kebab"
+          },
+          figmaNode: {
+            $ref: "common.schema.json#/definitions/figmaNode"
+          },
+          kind: {
+            enum: [
+              "svg",
+              "raster"
+            ]
+          },
+          file: {
+            type: "string",
+            minLength: 1
+          },
+          scale: {
+            type: "integer",
+            minimum: 1
+          },
+          alt: {
+            type: "string"
+          },
+          scaleApproved: {
+            type: "string",
+            minLength: 3
+          }
         }
       }
     }
@@ -14631,6 +15122,21 @@ function crossReferenceErrors(spec) {
   const spacing = new Set(Object.keys(spec.tokens.spacing));
   const components = new Map(spec.components.components.map((c) => [c.name, c]));
   const assets = new Map(spec.assets.assets.map((a) => [a.id, a]));
+  const surfaces = new Map(Object.entries(spec.tokens.surfaces ?? {}));
+  const radii = spec.tokens.radii ?? {};
+  for (const [name, surface] of surfaces) {
+    const base = `/surfaces/${name}`;
+    if (surface.background && !colors.has(surface.background)) err("tokens.yaml", `${base}/background`, `unknown color token "${surface.background}"`);
+    if (surface.border && !colors.has(surface.border.color)) err("tokens.yaml", `${base}/border/color`, `unknown color token "${surface.border.color}"`);
+    for (const axis of ["x", "y"]) {
+      const token = surface.padding?.[axis];
+      if (token && !spacing.has(token)) err("tokens.yaml", `${base}/padding/${axis}`, `unknown spacing token "${token}"`);
+    }
+    if (surface.radius !== void 0 && !(surface.radius in radii)) err("tokens.yaml", `${base}/radius`, `unknown radius "${surface.radius}"`);
+  }
+  const checkSurface = (file, path, name) => {
+    if (name && !surfaces.has(name)) err(file, `${path}/surface`, `unknown surface "${name}"`);
+  };
   for (const token of spacing) {
     const [group, name] = token.split(".");
     if (group === "space" && RESERVED_SPACING.has(name)) {
@@ -14645,7 +15151,7 @@ function crossReferenceErrors(spec) {
     });
   });
   spec.assets.assets.forEach((asset, i) => {
-    if (asset.kind === "raster" && (asset.scale ?? 1) < 2) {
+    if (asset.kind === "raster" && (asset.scale ?? 1) < 2 && !asset.scaleApproved) {
       err("assets/manifest.yaml", `/assets/${i}`, `raster asset "${asset.id}" must be exported at scale 2 or higher`);
     }
     if (spec.dir && !existsSync2(join2(spec.dir, "assets", asset.file))) {
@@ -14673,6 +15179,7 @@ function crossReferenceErrors(spec) {
     if (child.type === "component") checkVariant(file, path, child.ref, child.variant);
     if (child.type === "button") checkVariant(file, path, "button", child.variant);
     if (child.type === "group") {
+      checkSurface(file, path, child.surface);
       if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);
       if (groupNames.has(child.name)) err(file, `${path}/name`, `duplicate group name "${child.name}" in section`);
       groupNames.add(child.name);
@@ -14695,6 +15202,8 @@ function crossReferenceErrors(spec) {
       ids.add(section.id);
       if (section.spacing && !spacing.has(section.spacing)) err(file, `${base}/spacing`, `unknown spacing token "${section.spacing}"`);
       if (section.background && !colors.has(section.background)) err(file, `${base}/background`, `unknown color token "${section.background}"`);
+      checkSurface(file, base, section.surface);
+      if (section.background && section.surface) err(file, base, "section cannot have both background and surface");
       checkLayout(file, section.layout, `${base}/layout`);
       const groupNames = /* @__PURE__ */ new Set();
       section.children.forEach((child, i) => checkChild(file, child, `${base}/children/${i}`, groupNames));
