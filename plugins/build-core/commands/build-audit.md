@@ -11,7 +11,7 @@ Goal: produce a valid `site-spec/` in the current project repo, then stop for de
 
 1. Load the `site-spec` and `figma-extract` skills.
 2. Parse `fileKey` (and optional node id) from the URL. If `$ARGUMENTS` is empty, ask for the URL and stop.
-3. `get_metadata` on the file → list pages/top-level frames that are site pages. Ask the developer to confirm the page list and slugs (one question) unless there is only one obvious page.
+3. `get_metadata` on the file → list pages/top-level frames that are site pages. Without a node id this can list only some canvases (seen: only the cover page) — if the landing frames are not there, ask for a node-specific link (right-click frame → Copy link to selection) and stop. Ask the developer to confirm the page list and slugs (one question) unless there is only one obvious page.
 4. Write `site-spec/project.yaml` (platforms: ask which platform if not obvious; units `rem`; Webflow default breakpoints 1440/991/767/478).
 5. Extract global tokens: `get_variable_defs` + text styles → `site-spec/tokens.yaml`. Detect components used across pages → `site-spec/components.yaml`.
 6. Dispatch one `figma-auditor` agent per page **in parallel**, passing fileKey, page node, slug and the paths of tokens/components files.

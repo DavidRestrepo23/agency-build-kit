@@ -15,6 +15,9 @@ Read the `site-spec` skill first; it defines the output format.
 ## Procedure per page
 
 1. `get_metadata` on the page frame → list top-level children; each full-width child frame is a **section**, top to bottom.
+   - Designers often wrap sections in unnamed full-width frames (`Frame 82`, `Content`). Descend through any wrapper whose name is generic (`Frame N`, `Content`, `Group N`) and whose children are themselves full-width frames; the named children are the sections. Never emit a wrapper as a section.
+   - A navbar/header nested inside the hero frame is still its own section (`navbar`), placed first. Same for a footer nested in a wrapper.
+   - Sort sections by `y`, not by layer order.
 2. For each section: `get_design_context` on the section frame (not the whole page — keeps responses small).
 3. Map Figma → spec:
 
@@ -36,7 +39,8 @@ Read the `site-spec` skill first; it defines the output format.
 | Mobile/tablet frames of the same section | responsive values (`columns`, sizes) and `notes.responsive` |
 
 4. Tokens: `get_variable_defs` → colors, spacing, radii (store the primary button corner radius as `radii.button`); text styles → typography (size per breakpoint when mobile frames exist). Keep `figmaVar` ids.
-5. Assets: download asset URLs returned by `get_design_context` into `site-spec/assets/`; rasters at 2x. If only a raster exists for a logo/icon, record an open question instead of using it.
+   If `get_variable_defs` returns nothing usable (no variables, only effect/gradient styles), infer tokens from the raw values in `get_design_context` (most frequent fills, font sizes, gaps) and add ONE open question saying tokens were inferred, listing the main values.
+5. Assets: SVGs can be downloaded from the URLs returned by `get_design_context`. Those raster URLs are the **source image at its uploaded size**, not a 2x export — for rasters call `download_assets` on the image node with `defaultScale: 2` (or confirm the source is ≥ 2× the rendered slot) before writing `scale: 2`. Name files by their real format (`file` on the download: a `.png` URL can be JPEG). If only a raster exists for a logo/icon, record an open question instead of using it.
 6. Anything ambiguous → an open question line: `- [ ] <section>: <question>`. Typical: placeholder copy repeated, missing mobile frame, unclear interaction, font not available on Google Fonts.
 
 ## Never
