@@ -29,6 +29,27 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 6. **Assets:** logos/icons `kind: svg`; photos/mockups `kind: raster` with `scale: 2`. Manifest `file` is a file name relative to `site-spec/assets/` (e.g. `hero-mockup@2x.png`, not `assets/hero-mockup@2x.png`).
 7. **Code components:** set `needsCodeComponent: true` on sections whose behavior native Webflow cannot express (calculators, complex filters, carousels with logic).
 
+## Surfaces (box styles)
+
+Reusable box styles live in `tokens.yaml` under `surfaces` and are referenced with `surface: <name>` on a `section` or a `group` child:
+
+```yaml
+surfaces:
+  card:
+    background: neutral.glass                          # color token
+    border: { color: neutral.border-strong, width: 2 } # px
+    radius: card                                       # key in radii
+    padding: { x: space.xl, y: space.xl }              # spacing tokens
+```
+
+- Every property is optional, but a surface needs at least one.
+- A section uses either `background` or `surface`, never both.
+- Name every repeated card/badge/panel style; a box style used once still gets a surface.
+
+## Raster exceptions
+
+A raster below 2x needs `scaleApproved: "<reason>"` in the manifest (approved by the developer); `/build-audit` lists every exception in its report.
+
 ## Child types
 
 `heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, children) · `component` (ref, variant?, text?, href?, props?) · `form` (description) · `embed-placeholder` (description)

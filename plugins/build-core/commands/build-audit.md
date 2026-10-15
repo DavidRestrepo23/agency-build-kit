@@ -21,4 +21,4 @@ Goal: produce a valid `site-spec/` in the current project repo, then stop for de
    node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.mjs" site-spec
    ```
    Fix every error (re-read Figma when needed) until `ok: true`.
-9. Report to the developer: pages and section counts, token counts, components, assets, sections flagged `needsCodeComponent`, and the open questions list. Tell them the next step is resolving open questions (mark `- [x]`) and then running the platform setup command (e.g. `/wf-setup`).
+9. Report to the developer: pages and section counts, token counts, components, assets, sections flagged `needsCodeComponent`, surfaces defined and where they are used, every asset with `scaleApproved` plus its reason, and the open questions list. Tell them the next step is resolving open questions (mark `- [x]`) and then running the platform setup command (e.g. `/wf-setup`).

@@ -36,6 +36,7 @@ Read the `site-spec` skill first; it defines the output format.
 | Vector / icon / logo | `svg` asset |
 | Image fill / photo | `image` raster asset, `ratio` from frame size |
 | Nested frame grouping children | `group` with kebab `name` |
+| Frame with fill / stroke / corner radius / padding (card, badge, panel) | `group` (or `section`) with `surface: <name>`; define the surface once in `tokens.yaml` and reuse it for identical boxes |
 | Mobile/tablet frames of the same section | responsive values (`columns`, sizes) and `notes.responsive` |
 
 4. Tokens: `get_variable_defs` → colors, spacing, radii (store the primary button corner radius as `radii.button`); text styles → typography (size per breakpoint when mobile frames exist). Keep `figmaVar` ids.

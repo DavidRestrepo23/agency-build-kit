@@ -1,6 +1,6 @@
 ---
 description: Bootstrap an empty Webflow site with Client-First variables, utilities, style guide and shared components from site-spec
-argument-hint: "[site name or id]"
+argument-hint: "[site name or id] [--update]"
 ---
 
 # /wf-setup
@@ -16,7 +16,7 @@ Target site: $ARGUMENTS (ask if empty and more than one site is available).
   ```bash
   node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.mjs" site-spec --require-resolved
   ```
-- The site is empty or only contains Webflow defaults. If it already has custom classes or variables, stop and ask how to proceed.
+- Without `--update`: the site is empty or only contains Webflow defaults (if not, stop and ask). With `--update`: `site-spec/build-state.json` has `webflow.setup.status = done`; follow the "Update mode" section of `wf-bootstrap`.
 
 ## 2. Bootstrap
 

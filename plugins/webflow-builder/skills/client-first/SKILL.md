@@ -17,7 +17,7 @@ description: Finsweet Client-First naming and structure rules used by this agenc
 | Utility | closed list below | `padding-global`, `heading-style-h1`, `margin-bottom` |
 | Combo | `is-[kebab]`, stacked on a base class | `button is-secondary` |
 
-Utilities: `page-wrapper`, `main-wrapper`, `padding-global`, `container-*`, `padding-section-*`, `heading-style-h1..h6`, `text-size-*`, `text-weight-light|normal|medium|semibold|bold`, `text-color-*`, `background-color-*`, `text-align-*`, `text-rich-text`, `margin-|padding-` + `top|bottom|left|right|horizontal|vertical` or a size, `max-width-small|medium|large`, `hide-tablet|mobile-landscape|mobile-portrait`, `button`.
+Utilities: `page-wrapper`, `main-wrapper`, `padding-global`, `container-*`, `padding-section-*`, `heading-style-h1..h6`, `text-size-*`, `text-weight-light|normal|medium|semibold|bold`, `text-color-*`, `background-color-*`, `text-align-*`, `text-rich-text`, `margin-|padding-` + `top|bottom|left|right|horizontal|vertical` or a size, `max-width-small|medium|large`, `hide-tablet|mobile-landscape|mobile-portrait`, `button`, `surface-*` (box styles from `tokens.yaml` surfaces).
 
 Spacing utilities combine: `margin-bottom margin-md` = bottom margin only.
 
@@ -33,6 +33,7 @@ Spacing utilities combine: `margin-bottom margin-md` = bottom margin only.
 | `group` `name` | `<id>_<name>` |
 | `button` variant ≠ primary | `button is-<variant>` |
 | image | `<id>_image-wrapper` > `<id>_image` |
+| `surface: card` on a group/section | `<class> surface-card` (global utility stacked on the element's own class) |
 | token `brand.primary` | Webflow variable `brand-primary` |
 
 All of this is computed by `plan-section.mjs`; do not hand-roll class names.

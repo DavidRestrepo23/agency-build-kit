@@ -32,3 +32,7 @@ Shape: `{ ok, variables[], fonts[], styles[], classes[], components[] }` (`style
    ```
 
 MCP call fails → retry once → if it still fails, stop and report the exact call and error. Never continue on top of a failure.
+
+## Update mode (`/wf-setup --update`)
+
+Requires `webflow.setup.status = done`. Re-run the same plan idempotently: create missing variables and classes, update variables whose value changed (report every old → new value), re-apply every `styles[]` entry with `update_style`. Do not recreate the style-guide page or existing components. Never delete variables or classes.
