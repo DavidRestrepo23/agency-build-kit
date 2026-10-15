@@ -37,7 +37,7 @@ La agencia construye sitios en Webflow, Framer, HubSpot y Shopify. El diseño UX
 - **Webflow MCP** (v2.x: herramientas `data_*` headless + Designer Bridge para snapshots).
 - **Figma MCP** (`get_metadata`, `get_design_context`, `get_variable_defs`, `get_screenshot`) y el skill `figma:figma-design-to-code` como prerequisito de `get_design_context`.
 - **Webflow CLI ≥ 2.0** (Node ≥ 22.13) solo para `/wf-component`.
-- **Node ≥ 22** para los scripts del plugin (sin dependencias npm salvo un parser YAML).
+- **Node ≥ 22** para los scripts del plugin. Fuentes en `src/`; las dependencias (`yaml`, `ajv`) se empaquetan con esbuild en scripts autocontenidos `plugins/*/scripts/*.mjs`, así el plugin instalado no necesita `npm install`.
 
 ## 3. Arquitectura
 
@@ -71,9 +71,14 @@ agency-build-kit/
 │     ├─ skills/wf-bootstrap/
 │     ├─ skills/wf-section-build/
 │     ├─ agents/wf-qa-reviewer.md
-│     └─ scripts/
+│     └─ scripts/                     # bundles generados desde src/ (commiteados)
+│        ├─ validate-spec.mjs
+│        ├─ validate-class-names.mjs
+│        ├─ plan-setup.mjs            # tokens + components → plan JSON de bootstrap
 │        ├─ plan-section.mjs          # spec + tokens → plan JSON determinista
-│        └─ validate-class-names.mjs
+│        ├─ qa-structural.mjs         # spec + dump de Webflow → hallazgos
+│        └─ build-state.mjs           # lee/escribe build-state.json de forma segura
+├─ src/                                # fuentes de los scripts (lib/ + cli/)
 ├─ tests/                              # node:test + fixtures + golden files
 └─ docs/superpowers/specs/
 ```
@@ -88,6 +93,9 @@ agency-build-kit/
 | `/wf-setup` | Verifica prerequisitos y hace el bootstrap Client-First | Webflow MCP, `wf-bootstrap`, `client-first` |
 | `/wf-build <página> [--section <id>]` | Loop por sección: plan → ejecutar vía MCP → registrar estado | `plan-section.mjs`, `wf-section-build`, skills oficiales |
 | `plan-section.mjs` | Función pura: sección + tokens + componentes → plan JSON | — |
+| `plan-setup.mjs` | Función pura: tokens + components → variables, utilities Client-First y componentes a crear | — |
+| `qa-structural.mjs` | Compara spec vs dump JSON de Webflow (secciones, clases, headings, alt, href, valores hard-coded) | — |
+| `build-state.mjs` | `get` / `set-section` / `set-setup` sobre `build-state.json` con escritura atómica | — |
 | `validate-class-names.mjs` | Valida nombres contra reglas Client-First | — |
 | `/wf-qa <página>` | QA estructural, visual y de accesibilidad; escribe reporte y estados | `wf-qa-reviewer`, `accessibility-audit` |
 | `/wf-component <nombre>` | Code component vía CLI para piezas marcadas `needsCodeComponent` | Webflow CLI, skills oficiales de code components |
@@ -145,7 +153,19 @@ Valores responsivos (`size`, `spacing`, `columns`) aceptan claves `desktop`, `ta
 
 ### 4.3 `components.yaml`
 
-Piezas repetidas detectadas en Figma (`button`, `card`, `navbar`, `footer`…), con `figmaNode`, variantes (`primary`, `secondary`) y propiedades editables (texto, href, imagen).
+Piezas repetidas detectadas en Figma (`button`, `card`, `navbar`, `footer`…), con `figmaNode`, variantes y propiedades editables (texto, href, imagen). Cada variante puede declarar `styles` con tokens de color (`background`, `color`, `border`):
+
+```yaml
+components:
+  - name: button
+    figmaNode: "2:1"
+    variants:
+      - { name: primary, styles: { background: brand.primary, color: neutral.white, border: brand.primary } }
+      - { name: secondary, styles: { background: neutral.white, color: brand.primary, border: brand.primary } }
+    props: [text, href]
+```
+
+La variante `primary` (o la primera, si no existe `primary`) define la clase `button`; las demás se vuelven combos `is-<variante>`.
 
 ### 4.4 `pages/<slug>.yaml`
 
@@ -170,7 +190,7 @@ sections:
     needsCodeComponent: false
 ```
 
-Tipos de hijo permitidos: `heading`, `text`, `rich-text`, `image`, `svg`, `link`, `button`, `list`, `group` (contenedor con su propio `layout` y `children`), `component`, `form`, `embed-placeholder`.
+Tipos de hijo permitidos: `heading`, `text`, `rich-text`, `image`, `svg`, `link`, `button`, `list`, `group` (contenedor con `name` kebab-case único en la sección, su propio `layout` y `children`), `component`, `form`, `embed-placeholder`. Nombres de spacing reservados: `space.top|bottom|left|right|horizontal|vertical` (colisionan con utilities Client-First).
 
 ### 4.5 `assets/manifest.yaml`
 
@@ -294,7 +314,7 @@ Para secciones con `needsCodeComponent: true`: skill oficial `component-scaffold
 
 Escribe `site-spec/qa/<página>.md` y marca cada sección `qa-pass` o `qa-fail`. No corrige automáticamente; el dev decide y usa `/wf-build <página> --section <id>`.
 
-1. **Estructural (determinista, headless):** cada sección del spec existe; nombres pasan `validate-class-names`; no hay valores hard-coded donde existe token; un solo `h1` y jerarquía correcta; imágenes con alt; links con href.
+1. **Estructural (determinista, headless, `qa-structural.mjs`):** el agente arma un dump JSON con `query_elements`/`query_styles` y el script verifica: cada sección del spec existe; nombres pasan `validate-class-names`; no hay valores hard-coded donde existe token; un solo `h1` y jerarquía correcta; imágenes con alt; links con href.
 2. **Visual:** `wf-qa-reviewer` compara `get_screenshot` de Figma vs snapshot de Designer por sección; lista diffs (espaciado, color, tipografía, alineación) con severidad alta/media/baja. Para tablet/mobile: si el dev confirma publicar a staging `.webflow.io`, capturas en navegador a 1440/768/375 px; si no, esos breakpoints quedan marcados "no verificado".
 3. **Accesibilidad:** skill oficial `accessibility-audit`.
 
