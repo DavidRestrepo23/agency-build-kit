@@ -1,0 +1,6 @@
+{
+  "name": "build-core",
+  "version": "0.1.0",
+  "description": "Audit an approved Figma file into a neutral, reviewable site-spec shared by every platform builder",
+  "author": { "name": "David Restrepo" }
+}

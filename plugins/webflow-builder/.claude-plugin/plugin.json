@@ -1,0 +1,6 @@
+{
+  "name": "webflow-builder",
+  "version": "0.1.0",
+  "description": "Build a site-spec in Webflow with Client-First naming via the Webflow MCP, with phase commands and QA",
+  "author": { "name": "David Restrepo" }
+}
