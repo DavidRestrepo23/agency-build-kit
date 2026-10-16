@@ -216,3 +216,17 @@ test('e2e B: layout textAlign accepts only left, center, right', () => {
   editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].layout.textAlign = 'justify'; });
   assert.ok(errorsFor(dir).some((e) => e.path === '/sections/0/layout/textAlign'));
 });
+
+test('project.yaml accepts an optional language code', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'project.yaml', (p) => { p.language = 'es'; });
+  assert.deepEqual(errorsFor(dir), []);
+  editYaml(dir, 'project.yaml', (p) => { p.language = 'pt-BR'; });
+  assert.deepEqual(errorsFor(dir), []);
+});
+
+test('project.yaml rejects a language that is not a code', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'project.yaml', (p) => { p.language = 'Spanish'; });
+  assert.ok(errorsFor(dir).some((e) => e.file === 'project.yaml' && e.path === '/language'), JSON.stringify(errorsFor(dir)));
+});

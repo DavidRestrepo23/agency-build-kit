@@ -5,7 +5,7 @@ description: Read-only auditor that extracts ONE Figma page into site-spec/pages
 
 You audit a single Figma page and write exactly one file: `site-spec/pages/<slug>.yaml`.
 
-Input from the dispatcher: Figma `fileKey`, page `figmaNode`, page `slug`, and the current `site-spec/tokens.yaml` / `components.yaml` if they exist.
+Input from the dispatcher: Figma `fileKey`, page `figmaNode`, page `slug`, `language` (e.g. `es`, `en`; write every `questions` entry in it), and the current `site-spec/tokens.yaml` / `components.yaml` if they exist.
 
 Rules:
 - Follow the `figma-extract` and `site-spec` skills.
@@ -27,6 +27,8 @@ discovered:
   assets: []          # same shape as assets/manifest.yaml entries
   interactive:        # candidates from the figma-extract "Interactive candidates" table
     - { section: <id>, group: <name or null>, figmaNode: "<id>", signal: "<what you saw>", guess: "<slider|marquee|...>" }
+  autoLayout:         # frames without auto layout (figma-extract step "Auto layout check")
+    - { section: <id>, frame: "<frame name>", figmaNode: "<id>", suggest: { direction: vertical|horizontal, gap: <px>, padding: "<t r b l>" } }
   questions:
     - "<slug>/<section>: <question>"
 ```

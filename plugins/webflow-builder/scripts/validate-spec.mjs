@@ -14315,6 +14315,7 @@ var project_schema_default = {
   additionalProperties: false,
   properties: {
     name: { $ref: "common.schema.json#/definitions/kebab" },
+    language: { type: "string", pattern: "^[a-z]{2}(-[A-Z]{2})?$" },
     figma: {
       type: "object",
       required: ["fileKey", "url"],
