@@ -7,6 +7,8 @@ Claude Code plugins that turn an approved Figma into a built site, phase by phas
 | `build-core` | `/build-audit <figma-url>` → `site-spec/` |
 | `webflow-builder` | `/wf-setup` · `/wf-build <page> [--section <id>]` · `/wf-qa <page>` · `/wf-component <page> <section>` |
 
+New to the kit? Start with the step-by-step guide: [docs/onboarding.md](docs/onboarding.md).
+
 ## Install (each developer)
 
 ```text
