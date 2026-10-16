@@ -38,14 +38,46 @@ Reglas que conviene saber desde el principio:
 |---|---|
 | Claude Code en terminal | `claude --version` |
 | Node.js 22 o superior | `node -v` |
-| Acceso al repo del kit en GitHub | pídelo a quien administra el repo |
+| Git instalado y acceso al repo del kit en GitHub | `git --version`; el acceso lo da quien administra el repo |
 | Cuenta de Figma con acceso al archivo del cliente | — |
 | Cuenta de Webflow con acceso al workspace de la agencia | — |
 | Google Chrome (recomendado para Webflow Designer) | — |
 
 > Los comandos `/plugin` solo funcionan en Claude Code **en terminal**, no en el chat de la app de escritorio.
 
-### 2.2 Instalar los plugins
+### 2.2 Clonar el repo del kit
+
+Crea la carpeta de trabajo de la agencia y clona el kit dentro:
+
+```bash
+mkdir -p ~/Agencia/clientes && cd ~/Agencia && git clone git@github.com:DavidRestrepo23/agency-build-kit.git
+```
+
+¿No tienes llave SSH configurada en GitHub? Usa HTTPS (te pedirá iniciar sesión):
+
+```bash
+cd ~/Agencia && git clone https://github.com/DavidRestrepo23/agency-build-kit.git
+```
+
+Queda así:
+
+```text
+~/Agencia/
+├─ agency-build-kit/   ← el kit (no trabajes proyectos aquí)
+└─ clientes/           ← aquí van los proyectos de cliente
+```
+
+**Comprobación:**
+
+```bash
+ls ~/Agencia/agency-build-kit/plugins
+```
+
+Debe mostrar `build-core` y `webflow-builder`.
+
+> No necesitas ejecutar `npm install`: los scripts que usan los plugins ya vienen listos en `plugins/*/scripts/`. `npm install` solo hace falta si vas a modificar el kit.
+
+### 2.3 Instalar los plugins
 
 Abre una terminal y entra a Claude Code:
 
@@ -58,7 +90,7 @@ Dentro de `claude`, ejecuta uno por uno:
 ```text
 /plugin marketplace add webflow/webflow-skills
 /plugin install webflow-skills@webflow-skills
-/plugin marketplace add DavidRestrepo23/agency-build-kit
+/plugin marketplace add ~/Agencia/agency-build-kit
 /plugin install build-core@agency-build-kit
 /plugin install webflow-builder@agency-build-kit
 ```
@@ -67,23 +99,31 @@ Sal (`/exit`) y vuelve a entrar con `claude`.
 
 **Comprobación:** escribe `/` y verifica que aparecen `/build-audit`, `/wf-setup`, `/wf-build`, `/wf-qa` y `/wf-component`.
 
-> ¿Falla `marketplace add` por permisos? Pide acceso al repo o clónalo y usa la ruta local: `/plugin marketplace add ~/Agencia/agency-build-kit`.
-
-### 2.3 Conectar Figma y Webflow
+### 2.4 Conectar Figma y Webflow
 
 1. En claude.ai → **Settings → Connectors**, conecta **Figma** y **Webflow** (en Webflow elige el workspace de la agencia).
 2. Dentro de `claude`, ejecuta `/mcp` y confirma que ambos aparecen conectados.
 
-### 2.4 Ajuste de Chrome (evita desconexiones con Designer)
+### 2.5 Ajuste de Chrome (evita desconexiones con Designer)
 
 1. Abre `chrome://settings/performance`.
 2. En **"Always keep these sites active"** agrega `webflow.com`.
 
-### 2.5 Actualizar el kit más adelante
+### 2.6 Actualizar el kit más adelante
+
+Cuando haya una versión nueva del kit:
+
+```bash
+cd ~/Agencia/agency-build-kit && git pull
+```
+
+Y dentro de `claude`:
 
 ```text
 /plugin marketplace update agency-build-kit
 ```
+
+Reinicia `claude` para que tome los cambios.
 
 ---
 
@@ -258,8 +298,8 @@ git add site-spec && git commit -m "qa: home revisada" && git push
 
 | Síntoma | Qué hacer |
 |---|---|
-| No aparecen los comandos `/build-audit`, `/wf-*` | Reinstala los plugins (sección 2.2) y reinicia `claude` |
-| "Unable to connect to Webflow Designer" | Abre Designer con la app MCP Bridge (sección 7), pestaña al frente; revisa el ajuste de Chrome (2.4); reintenta |
+| No aparecen los comandos `/build-audit`, `/wf-*` | Revisa que el kit esté clonado (sección 2.2), reinstala los plugins (sección 2.3) y reinicia `claude` |
+| "Unable to connect to Webflow Designer" | Abre Designer con la app MCP Bridge (sección 7), pestaña al frente; revisa el ajuste de Chrome (2.5); reintenta |
 | "Too Many Requests" (429) de Webflow | Normal en sitios grandes: espera un minuto y vuelve a ejecutar el mismo comando (retoma solo) |
 | `/wf-setup` se niega a correr | Hay preguntas sin marcar en `open-questions.md`, o el sitio no está vacío |
 | Las capturas de una sección salen en blanco | Limitación de las capturas aisladas; revisa la página completa o directamente en Designer |
