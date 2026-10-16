@@ -95,7 +95,7 @@ Dentro de `claude`, ejecuta uno por uno:
 /plugin install webflow-builder@agency-build-kit
 ```
 
-> **Importante — usa tu ruta real del kit.** `~/Agencia/agency-build-kit` es la ruta sugerida en el paso 2.2. Si clonaste el kit en otra carpeta, reemplázala en `/plugin marketplace add` por la ruta donde quedó (por ejemplo `/plugin marketplace add ~/Documents/agency-build-kit`). Para saber la ruta exacta, entra a la carpeta del kit en la terminal y ejecuta `pwd`. Si la ruta tiene espacios, escríbela entre comillas: `/plugin marketplace add "~/Desktop/Agents IA/agency-build-kit"`.
+> **Importante — usa tu ruta real del kit.** `~/Agencia/agency-build-kit` es la ruta sugerida en el paso 2.2. Si clonaste el kit en otra carpeta, reemplázala en `/plugin marketplace add` por la ruta donde quedó (por ejemplo `/plugin marketplace add ~/Documents/agency-build-kit`). Para saber la ruta exacta, entra a la carpeta del kit en la terminal y ejecuta `pwd`. Si la ruta tiene espacios, copia la ruta completa que muestra `pwd` y escríbela entre comillas: `/plugin marketplace add "/Users/tu-usuario/Desktop/Agents IA/agency-build-kit"`.
 
 Sal (`/exit`) y vuelve a entrar con `claude`.
 
