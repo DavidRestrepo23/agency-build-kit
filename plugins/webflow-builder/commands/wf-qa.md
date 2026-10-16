@@ -3,7 +3,7 @@ description: QA a built Webflow page against site-spec and Figma — structural 
 argument-hint: <page>
 ---
 
-# /wf-qa
+# /webflow-builder:wf-qa
 
 Page: $ARGUMENTS
 
@@ -38,4 +38,4 @@ Write `site-spec/qa/<page>.md`: structural findings, per-section visual diffs (h
 node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <id> --status qa-pass
 ```
 
-Do not fix anything. Tell the developer to fix the spec or run `/wf-build <page> --section <id>` for failing sections.
+Do not fix anything. Tell the developer to fix the spec or run `/webflow-builder:wf-build <page> --section <id>` for failing sections.

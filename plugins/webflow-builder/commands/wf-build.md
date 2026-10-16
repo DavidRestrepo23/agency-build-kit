@@ -3,7 +3,7 @@ description: Build one page (or one section) of the site-spec in Webflow, sectio
 argument-hint: <page> [--section <id>]
 ---
 
-# /wf-build
+# /webflow-builder:wf-build
 
 Arguments: $ARGUMENTS → `<page>` and optional `--section <id>`.
 
@@ -12,7 +12,7 @@ Arguments: $ARGUMENTS → `<page>` and optional `--section <id>`.
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.mjs" site-spec --require-resolved
 ```
-Then read `site-spec/build-state.json`: `webflow.setup.status` must be `done`, otherwise tell the developer to run `/wf-setup` and stop. Confirm the official `webflow-skills` plugin is installed (skill `webflow-mcp:figma-to-webflow` available), the Webflow MCP responds (`webflow_guide_tool`, `whoami`) and the Figma MCP is authenticated.
+Then read `site-spec/build-state.json`: `webflow.setup.status` must be `done`, otherwise tell the developer to run `/webflow-builder:wf-setup` and stop. Confirm the official `webflow-skills` plugin is installed (skill `webflow-mcp:figma-to-webflow` available), the Webflow MCP responds (`webflow_guide_tool`, `whoami`) and the Figma MCP is authenticated.
 
 Ensure the page exists in Webflow (`data_pages_tool`; create it with slug `<page>` and the `page-wrapper` > `main-wrapper` structure if missing). Remember its `pageId`.
 
@@ -29,4 +29,4 @@ Load `client-first` and `wf-section-build`. For each section of `site-spec/pages
 
 ## 3. Report
 
-Table: section → built / skipped / failed / placeholder. List placeholders (code components → `/wf-component <section>`, forms → build natively in Designer). Suggest `/wf-qa <page>`. Do not publish.
+Table: section → built / skipped / failed / placeholder. List placeholders (code components → `/webflow-builder:wf-component <section>`, forms → build natively in Designer). Suggest `/webflow-builder:wf-qa <page>`. Do not publish.

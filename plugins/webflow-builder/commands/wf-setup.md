@@ -3,7 +3,7 @@ description: Bootstrap an empty Webflow site with Client-First variables, utilit
 argument-hint: "[site name or id] [--update]"
 ---
 
-# /wf-setup
+# /webflow-builder:wf-setup
 
 Target site: $ARGUMENTS (ask if empty and more than one site is available).
 
@@ -24,4 +24,4 @@ Load the `client-first` and `wf-bootstrap` skills and follow `wf-bootstrap` exac
 
 ## 3. Report
 
-List created variables (count per collection), utilities, components and the style-guide page link. Ask the developer to review the style guide in Designer before running `/wf-build <page>`. Do not publish.
+List created variables (count per collection), utilities, components and the style-guide page link. Ask the developer to review the style guide in Designer before running `/webflow-builder:wf-build <page>`. Do not publish.

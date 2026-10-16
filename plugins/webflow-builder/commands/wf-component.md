@@ -3,7 +3,7 @@ description: Build a React code component with the Webflow CLI for a site-spec s
 argument-hint: <page> <section-id>
 ---
 
-# /wf-component
+# /webflow-builder:wf-component
 
 Arguments: $ARGUMENTS → `<page> <section-id>`.
 

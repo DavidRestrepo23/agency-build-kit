@@ -12,14 +12,14 @@ El kit son dos plugins de Claude Code:
 
 | Plugin | Qué hace | Comandos |
 |---|---|---|
-| `build-core` | Lee el Figma aprobado y genera una **ficha técnica** del sitio (`site-spec/`): tokens, componentes, páginas, secciones, assets y preguntas abiertas. No depende de la plataforma. | `/build-audit` |
-| `webflow-builder` | Toma esa ficha y construye el sitio en Webflow con nomenclatura **Client-First**, por fases. | `/wf-setup`, `/wf-build`, `/wf-qa`, `/wf-component` |
+| `build-core` | Lee el Figma aprobado y genera una **ficha técnica** del sitio (`site-spec/`): tokens, componentes, páginas, secciones, assets y preguntas abiertas. No depende de la plataforma. | `/build-core:build-audit` |
+| `webflow-builder` | Toma esa ficha y construye el sitio en Webflow con nomenclatura **Client-First**, por fases. | `/webflow-builder:wf-setup`, `/webflow-builder:wf-build`, `/webflow-builder:wf-qa`, `/webflow-builder:wf-component` |
 
 El flujo siempre es:
 
 ```text
-Figma aprobado → /build-audit → (resuelves preguntas) → /wf-setup → (revisas style guide)
-→ /wf-build <página> → /wf-qa <página> → (ajustes) → publicas tú, a mano
+Figma aprobado → /build-core:build-audit → (resuelves preguntas) → /webflow-builder:wf-setup → (revisas style guide)
+→ /webflow-builder:wf-build <página> → /webflow-builder:wf-qa <página> → (ajustes) → publicas tú, a mano
 ```
 
 Reglas que conviene saber desde el principio:
@@ -97,12 +97,15 @@ Dentro de `claude`, ejecuta uno por uno:
 
 Sal (`/exit`) y vuelve a entrar con `claude`.
 
-**Comprobación:** escribe `/` y verifica que aparecen `/build-audit`, `/wf-setup`, `/wf-build`, `/wf-qa` y `/wf-component`.
+**Comprobación:** escribe `/` y verifica que aparecen `/build-core:build-audit`, `/webflow-builder:wf-setup`, `/webflow-builder:wf-build`, `/webflow-builder:wf-qa` y `/webflow-builder:wf-component`.
+
+> Los comandos de un plugin siempre llevan el nombre del plugin como prefijo (`/build-core:…`, `/webflow-builder:…`). Es normal. Puedes escribir solo el final (`/build-audit`, `/wf-setup`) y el autocompletado te ofrece el comando completo.
 
 ### 2.4 Conectar Figma y Webflow
 
 1. En claude.ai → **Settings → Connectors**, conecta **Figma** y **Webflow** (en Webflow elige el workspace de la agencia).
 2. Dentro de `claude`, ejecuta `/mcp` y confirma que ambos aparecen conectados.
+3. El plugin `webflow-skills` trae su propio servidor MCP de Webflow. Si en `/mcp` aparece `webflow-skills:webflow` como *needs authentication*, selecciónalo y autorízalo (o ignóralo si ya tienes el conector de Webflow de claude.ai conectado: basta con uno).
 
 ### 2.5 Ajuste de Chrome (evita desconexiones con Designer)
 
@@ -143,7 +146,7 @@ Copia el link **del frame de la página**: clic derecho sobre el frame → *Copy
 ### 3.2 Sitio de Webflow
 
 - Crea un **sitio nuevo y vacío** en el workspace de la agencia.
-- No uses un sitio que ya tenga clases o variables: `/wf-setup` se niega a correr ahí.
+- No uses un sitio que ya tenga clases o variables: `/webflow-builder:wf-setup` se niega a correr ahí.
 
 ### 3.3 Carpeta y repositorio del proyecto
 
@@ -168,10 +171,10 @@ claude
 
 ---
 
-## 4. Fase 1 — Auditar el Figma (`/build-audit`)
+## 4. Fase 1 — Auditar el Figma (`/build-core:build-audit`)
 
 ```text
-/build-audit <link del frame de Figma>
+/build-core:build-audit <link del frame de Figma>
 ```
 
 **Qué hace el agente:**
@@ -196,14 +199,14 @@ Puedes editar los YAML a mano si algo está mal. Después:
 git add site-spec && git commit -m "audit: site-spec inicial"
 ```
 
-> No pases a la fase 2 con preguntas sin marcar: `/wf-setup` se va a negar.
+> No pases a la fase 2 con preguntas sin marcar: `/webflow-builder:wf-setup` se va a negar.
 
 ---
 
-## 5. Fase 2 — Preparar Webflow (`/wf-setup`)
+## 5. Fase 2 — Preparar Webflow (`/webflow-builder:wf-setup`)
 
 ```text
-/wf-setup <nombre del sitio en Webflow>
+/webflow-builder:wf-setup <nombre del sitio en Webflow>
 ```
 
 **Qué hace el agente:**
@@ -220,21 +223,21 @@ git add site-spec && git commit -m "audit: site-spec inicial"
 ¿Cambiaste algo en `tokens.yaml` después? Vuelve a aplicar con:
 
 ```text
-/wf-setup <sitio> --update
+/webflow-builder:wf-setup <sitio> --update
 ```
 
 ---
 
-## 6. Fase 3 — Construir páginas (`/wf-build`)
+## 6. Fase 3 — Construir páginas (`/webflow-builder:wf-build`)
 
 ```text
-/wf-build home
+/webflow-builder:wf-build home
 ```
 
 Para probar de a poco, una sección a la vez:
 
 ```text
-/wf-build home --section hero
+/webflow-builder:wf-build home --section hero
 ```
 
 **Qué hace el agente:** construye sección por sección con elementos nativos de Webflow (editables por el cliente), sube imágenes y guarda el progreso en `site-spec/build-state.json`.
@@ -245,9 +248,9 @@ Para probar de a poco, una sección a la vez:
 - El resumen final: qué se construyó, qué se saltó, qué quedó pendiente.
 - **Pendientes típicos:**
   - Formularios → se arman a mano en Designer.
-  - Secciones marcadas como code component → `/wf-component home <sección>`.
+  - Secciones marcadas como code component → `/webflow-builder:wf-component home <sección>`.
 
-Si se corta o falla a mitad, vuelve a ejecutar `/wf-build home`: retoma donde quedó y salta lo ya construido. Si editas una sección del YAML, solo esa se reconstruye.
+Si se corta o falla a mitad, vuelve a ejecutar `/webflow-builder:wf-build home`: retoma donde quedó y salta lo ya construido. Si editas una sección del YAML, solo esa se reconstruye.
 
 ```bash
 git add site-spec && git commit -m "build: home"
@@ -255,7 +258,7 @@ git add site-spec && git commit -m "build: home"
 
 ---
 
-## 7. Fase 4 — Revisar calidad (`/wf-qa`)
+## 7. Fase 4 — Revisar calidad (`/webflow-builder:wf-qa`)
 
 Antes de correrlo, conecta Designer (necesario para las capturas):
 
@@ -264,7 +267,7 @@ Antes de correrlo, conecta Designer (necesario para las capturas):
 3. Deja esa pestaña **al frente**.
 
 ```text
-/wf-qa home
+/webflow-builder:wf-qa home
 ```
 
 **Qué revisas tú:** el reporte `site-spec/qa/home.md`:
@@ -276,7 +279,7 @@ Antes de correrlo, conecta Designer (necesario para las capturas):
 Corrige lo que haga falta (en el YAML o en Designer) y reconstruye solo esa sección:
 
 ```text
-/wf-build home --section <id>
+/webflow-builder:wf-build home --section <id>
 ```
 
 ---
@@ -298,10 +301,10 @@ git add site-spec && git commit -m "qa: home revisada" && git push
 
 | Síntoma | Qué hacer |
 |---|---|
-| No aparecen los comandos `/build-audit`, `/wf-*` | Revisa que el kit esté clonado (sección 2.2), reinstala los plugins (sección 2.3) y reinicia `claude` |
+| No aparecen los comandos `/build-core:build-audit`, `/wf-*` | Revisa que el kit esté clonado (sección 2.2), reinstala los plugins (sección 2.3) y reinicia `claude` |
 | "Unable to connect to Webflow Designer" | Abre Designer con la app MCP Bridge (sección 7), pestaña al frente; revisa el ajuste de Chrome (2.5); reintenta |
 | "Too Many Requests" (429) de Webflow | Normal en sitios grandes: espera un minuto y vuelve a ejecutar el mismo comando (retoma solo) |
-| `/wf-setup` se niega a correr | Hay preguntas sin marcar en `open-questions.md`, o el sitio no está vacío |
+| `/webflow-builder:wf-setup` se niega a correr | Hay preguntas sin marcar en `open-questions.md`, o el sitio no está vacío |
 | Las capturas de una sección salen en blanco | Limitación de las capturas aisladas; revisa la página completa o directamente en Designer |
 | El Figma no tiene variables | Normal: el agente infiere los tokens y te deja una pregunta para confirmarlos |
 

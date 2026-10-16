@@ -1,6 +1,6 @@
 ---
 name: wf-section-build
-description: Executes one plan-section.mjs plan in Webflow through the Webflow MCP — create custom classes, build WHTML, apply breakpoint styles bound to variables, attach assets, insert components, record build state. Use only from /wf-build.
+description: Executes one plan-section.mjs plan in Webflow through the Webflow MCP — create custom classes, build WHTML, apply breakpoint styles bound to variables, attach assets, insert components, record build state. Use only from /webflow-builder:wf-build.
 ---
 
 # Build one section from its plan
@@ -21,8 +21,8 @@ Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml,
    ```bash
    node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-class-names.mjs" <every classesToCreate and utilitiesUsed name>
    ```
-2. `query_styles`: every `utilitiesUsed` must already exist (created by `/wf-setup`). Missing → stop and tell the developer to run `/wf-setup --update` (the spec gained a utility or surface after setup).
-   `surface-*` and other utilities are **global classes created by `/wf-setup`**: stack the existing global class on the element (`<custom> surface-card`); never create a new combo class with that name.
+2. `query_styles`: every `utilitiesUsed` must already exist (created by `/webflow-builder:wf-setup`). Missing → stop and tell the developer to run `/webflow-builder:wf-setup --update` (the spec gained a utility or surface after setup).
+   `surface-*` and other utilities are **global classes created by `/webflow-builder:wf-setup`**: stack the existing global class on the element (`<custom> surface-card`); never create a new combo class with that name.
 3. `data_style_tool create_style` for each `classesToCreate` not yet existing.
 4. `data_whtml_builder` with `whtml` (structure only, one call) inside `main-wrapper` of the target page, **in spec order**: insert it before the element of the next spec section that already exists (find `section_<nextId>` with `query_elements`); append at the end only when no later section exists yet. Capture returned element ids.
 5. `data_style_tool update_style` for each `styles[]` entry on its breakpoint; bind `variables` with `variable_as_value`.
@@ -42,5 +42,5 @@ On a failure that persists after one retry:
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status failed --error "<tool>: <message>" --ids <ids captured in step 4, if step 4 ran>
 ```
-Passing the partial ids lets the next `/wf-build` delete them instead of leaving a half-built duplicate.
+Passing the partial ids lets the next `/webflow-builder:wf-build` delete them instead of leaving a half-built duplicate.
 then stop.

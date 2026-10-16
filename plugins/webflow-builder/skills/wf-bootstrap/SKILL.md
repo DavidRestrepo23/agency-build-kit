@@ -1,6 +1,6 @@
 ---
 name: wf-bootstrap
-description: Executes the plan-setup.mjs output in an empty Webflow site through the Webflow MCP — variables, fonts, Client-First utilities, style guide page, shared components. Use only from /wf-setup.
+description: Executes the plan-setup.mjs output in an empty Webflow site through the Webflow MCP — variables, fonts, Client-First utilities, style guide page, shared components. Use only from /webflow-builder:wf-setup.
 ---
 
 # Webflow bootstrap from plan-setup
@@ -33,7 +33,7 @@ Shape: `{ ok, variables[], fonts[], styles[], classes[], components[] }` (`style
 
 MCP call fails → retry once → if it still fails, stop and report the exact call and error. Never continue on top of a failure.
 
-## Update mode (`/wf-setup --update`)
+## Update mode (`/webflow-builder:wf-setup --update`)
 
 Requires `webflow.setup.status = done`. Re-run the same plan idempotently:
 

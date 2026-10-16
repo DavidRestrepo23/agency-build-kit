@@ -11,12 +11,12 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 
 | File | Who writes it | Content |
 |---|---|---|
-| `project.yaml` | `/build-audit` | name (kebab), figma fileKey + url, platforms, `units: rem`, breakpoints, pages (slug + figmaNode) |
-| `tokens.yaml` | `/build-audit` | colors, typography, spacing, radii, shadows, fonts — values in **px** |
-| `components.yaml` | `/build-audit` | repeated pieces (button, card, navbar, footer) with variants and color-token styles |
+| `project.yaml` | `/build-core:build-audit` | name (kebab), figma fileKey + url, platforms, `units: rem`, breakpoints, pages (slug + figmaNode) |
+| `tokens.yaml` | `/build-core:build-audit` | colors, typography, spacing, radii, shadows, fonts — values in **px** |
+| `components.yaml` | `/build-core:build-audit` | repeated pieces (button, card, navbar, footer) with variants and color-token styles |
 | `pages/<slug>.yaml` | `figma-auditor` | ordered sections → neutral element tree |
-| `assets/manifest.yaml` + files | `/build-audit` | svg / raster@2x exports |
-| `open-questions.md` | `/build-audit` | ambiguities as `- [ ]` checkboxes; dev marks `- [x]` when resolved |
+| `assets/manifest.yaml` + files | `/build-core:build-audit` | svg / raster@2x exports |
+| `open-questions.md` | `/build-core:build-audit` | ambiguities as `- [ ]` checkboxes; dev marks `- [x]` when resolved |
 | `build-state.json` | platform builders only (via `build-state.mjs`) | never edit by hand |
 
 ## Rules
@@ -59,7 +59,7 @@ surfaces:
 
 ## Raster exceptions
 
-A raster below 2x needs `scaleApproved: "<reason>"` in the manifest (approved by the developer); `/build-audit` lists every exception in its report.
+A raster below 2x needs `scaleApproved: "<reason>"` in the manifest (approved by the developer); `/build-core:build-audit` lists every exception in its report.
 
 ## Child types
 

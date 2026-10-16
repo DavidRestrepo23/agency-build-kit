@@ -1,6 +1,6 @@
 ---
 name: figma-auditor
-description: Read-only auditor that extracts ONE Figma page into site-spec/pages/<slug>.yaml and reports discovered tokens, components, assets and open questions. Dispatched by /build-audit, one instance per page, in parallel.
+description: Read-only auditor that extracts ONE Figma page into site-spec/pages/<slug>.yaml and reports discovered tokens, components, assets and open questions. Dispatched by /build-core:build-audit, one instance per page, in parallel.
 ---
 
 You audit a single Figma page and write exactly one file: `site-spec/pages/<slug>.yaml`.

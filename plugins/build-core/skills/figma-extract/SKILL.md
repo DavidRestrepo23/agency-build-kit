@@ -1,6 +1,6 @@
 ---
 name: figma-extract
-description: How to read an approved Figma file through the Figma MCP and translate frames, variables, text styles, component instances and assets into site-spec YAML. Use when auditing Figma for /build-audit or when a figma-auditor agent extracts a page.
+description: How to read an approved Figma file through the Figma MCP and translate frames, variables, text styles, component instances and assets into site-spec YAML. Use when auditing Figma for /build-core:build-audit or when a figma-auditor agent extracts a page.
 ---
 
 # Figma → site-spec extraction
@@ -43,7 +43,7 @@ Read the `site-spec` skill first; it defines the output format.
 4. Tokens: `get_variable_defs` → colors, spacing, radii (store the primary button corner radius as `radii.button`); text styles → typography (size per breakpoint when mobile frames exist). Keep `figmaVar` ids.
    If `get_variable_defs` returns nothing usable (no variables, only effect/gradient styles), infer tokens from the raw values in `get_design_context` (most frequent fills, font sizes, gaps) and add ONE open question saying tokens were inferred, listing the main values.
 5. Assets: SVGs can be downloaded from the URLs returned by `get_design_context`. Those raster URLs are the **source image at its uploaded size**, not a 2x export — for rasters call `download_assets` on the image node with `defaultScale: 2` (or confirm the source is ≥ 2× the rendered slot) before writing `scale: 2`. Name files by their real format (`file` on the download: a `.png` URL can be JPEG). If only a raster exists for a logo/icon, record an open question instead of using it.
-6. Interactive candidates: flag every section or group that may have behavior (see "Interactive candidates" below). Never decide the behavior yourself; report each candidate so `/build-audit` can ask the developer.
+6. Interactive candidates: flag every section or group that may have behavior (see "Interactive candidates" below). Never decide the behavior yourself; report each candidate so `/build-core:build-audit` can ask the developer.
 7. Anything ambiguous → an open question line: `- [ ] <section>: <question>`. Typical: placeholder copy repeated, missing mobile frame, unclear interaction, font not available on Google Fonts.
 
 ## Interactive candidates
@@ -64,7 +64,7 @@ Figma frames are static; behavior must come from the developer. Flag a section o
 | Prototype interactions on the frame (if the MCP exposes them) | the prototyped behavior |
 | Diagram or calculator with logic (rings, steps, sliders with values) | code component |
 
-For each candidate keep: section id (and group name), Figma node id, the signal, and your best guess. Do not write `needsCodeComponent` or `notes.interaction` from a guess — wait for the developer's answer in `/build-audit`.
+For each candidate keep: section id (and group name), Figma node id, the signal, and your best guess. Do not write `needsCodeComponent` or `notes.interaction` from a guess — wait for the developer's answer in `/build-core:build-audit`.
 
 ## Never
 

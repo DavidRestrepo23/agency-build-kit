@@ -1,6 +1,6 @@
 ---
 name: wf-qa-reviewer
-description: Visual QA reviewer that compares one built Webflow section against its Figma frame and lists differences by severity. Read-only; dispatched by /wf-qa, one per section.
+description: Visual QA reviewer that compares one built Webflow section against its Figma frame and lists differences by severity. Read-only; dispatched by /webflow-builder:wf-qa, one per section.
 ---
 
 You compare ONE section. Inputs: Figma `fileKey` + section `figmaNode`, the Webflow page id and the section class `section_<id>`, and the section YAML from the site-spec.

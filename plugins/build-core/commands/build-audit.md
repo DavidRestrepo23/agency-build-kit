@@ -3,7 +3,7 @@ description: Audit an approved Figma file into site-spec/ (tokens, components, p
 argument-hint: <figma-url>
 ---
 
-# /build-audit
+# /build-core:build-audit
 
 Figma URL: $ARGUMENTS
 
@@ -26,4 +26,4 @@ Goal: produce a valid `site-spec/` in the current project repo, then stop for de
    node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.mjs" site-spec
    ```
    Fix every error (re-read Figma when needed) until `ok: true`.
-10. Report to the developer: pages and section counts, interactive elements and the behavior chosen for each, token counts, components, assets, sections flagged `needsCodeComponent`, surfaces defined and where they are used, every asset with `scaleApproved` plus its reason, and the open questions list. Tell them the next step is resolving open questions (mark `- [x]`) and then running the platform setup command (e.g. `/wf-setup`).
+10. Report to the developer: pages and section counts, interactive elements and the behavior chosen for each, token counts, components, assets, sections flagged `needsCodeComponent`, surfaces defined and where they are used, every asset with `scaleApproved` plus its reason, and the open questions list. Tell them the next step is resolving open questions (mark `- [x]`) and then running the platform setup command (e.g. `/webflow-builder:wf-setup`).
