@@ -6,9 +6,9 @@ colors:
   - { name: neutral.glass, value: "#FFFFFF0D", role: background }
   - { name: neutral.border-strong, value: "#FFFFFFE6", role: border }
 typography:
-  - { name: heading.h1, family: Inter, weight: 700, size: { desktop: 64, mobile: 40 }, lineHeight: 1.1, letterSpacing: -0.02 }
+  - { name: heading.h1, family: Inter, weight: 700, size: { desktop: 64, mobile: 40 }, lineHeight: 1.1, letterSpacing: -1.28 }
   - { name: heading.h2, family: Inter, weight: 700, size: { desktop: 48, tablet: 40, mobile: 32 }, lineHeight: 1.2 }
-  - { name: text.large, family: Inter, weight: 400, size: { desktop: 20, mobile: 18 }, lineHeight: 1.5 }
+  - { name: text.large, family: Inter, weight: 400, size: { desktop: 20, mobile: 18 }, lineHeight: 1.5, letterSpacing: 2.4, textTransform: uppercase }
   - { name: text.regular, family: Inter, weight: 400, size: 16, lineHeight: 1.5 }
 spacing:
   section.large: { desktop: 128, mobile: 64 }

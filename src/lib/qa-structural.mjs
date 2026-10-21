@@ -67,6 +67,13 @@ export function checkStructure(spec, pageSlug, dump) {
     }
   }
 
+  // A global class stacked as a second class lands in Webflow as a combo with no properties: its styles never apply.
+  for (const style of dump.styles ?? []) {
+    if (style.isComboClass && !Object.keys(style.props ?? {}).length && !Object.keys(style.variables ?? {}).length) {
+      add('high', `empty combo class "${style.name}" (${style.breakpoint ?? 'main'}): stacked classes have no effect; put the props on the element's own class`, sectionOfClass(style.name.split(/[\s.]+/)[0], page));
+    }
+  }
+
   const index = tokenValueIndex(spec);
   for (const style of dump.styles ?? []) {
     if (!style.name?.includes('_')) continue;

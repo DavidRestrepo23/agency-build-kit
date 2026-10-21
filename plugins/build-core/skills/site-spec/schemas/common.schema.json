@@ -15,6 +15,7 @@
           "properties": {
             "desktop": { "type": "number" },
             "tablet": { "type": "number" },
+            "mobileLandscape": { "type": "number" },
             "mobile": { "type": "number" }
           }
         }

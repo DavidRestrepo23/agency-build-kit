@@ -14298,6 +14298,7 @@ var common_schema_default = {
           properties: {
             desktop: { type: "number" },
             tablet: { type: "number" },
+            mobileLandscape: { type: "number" },
             mobile: { type: "number" }
           }
         }
@@ -14438,7 +14439,11 @@ var tokens_schema_default = {
             type: "number"
           },
           letterSpacing: {
-            type: "number"
+            type: "number",
+            description: "px, as in Figma; converted to em relative to the desktop size"
+          },
+          textTransform: {
+            enum: ["none", "uppercase", "lowercase", "capitalize"]
           },
           figmaVar: {
             type: "string"
@@ -15364,13 +15369,14 @@ function pxToRem(px) {
 // src/lib/responsive.mjs
 function resolveResponsive(value) {
   if (typeof value === "number" || typeof value === "string") {
-    return { main: value, medium: value, small: value };
+    return { main: value, medium: value, small: value, tiny: value };
   }
   if (value && typeof value === "object" && "desktop" in value) {
     const main = value.desktop;
     const medium = value.tablet ?? main;
-    const small = value.mobile ?? medium;
-    return { main, medium, small };
+    const small = value.mobileLandscape ?? value.mobile ?? medium;
+    const tiny = value.mobile ?? small;
+    return { main, medium, small, tiny };
   }
   throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
 }
@@ -15384,7 +15390,9 @@ function responsiveVariableNames(token, value, suffix = "") {
   const base = variableName(token) + suffix;
   const out = { main: { name: base, value: resolved.main } };
   if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
-  if (resolved.small !== resolved.medium) out.small = { name: `${base}-mobile`, value: resolved.small };
+  const landscape = value && typeof value === "object" && value.mobileLandscape !== void 0;
+  if (resolved.small !== resolved.medium) out.small = { name: `${base}-${landscape ? "mobile-landscape" : "mobile"}`, value: resolved.small };
+  if (resolved.tiny !== resolved.small) out.tiny = { name: `${base}-mobile`, value: resolved.tiny };
   return out;
 }
 
@@ -15394,16 +15402,65 @@ function primaryVariantName(component) {
   return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
 }
 
+// src/lib/styles.mjs
+var SIDES = ["top", "right", "bottom", "left"];
+var CORNERS = ["top-left", "top-right", "bottom-right", "bottom-left"];
+function letterSpacingEm(type) {
+  const size = resolveResponsive(type.size).main;
+  return `${Number((type.letterSpacing / size).toFixed(4))}em`;
+}
+function typographyStyles(cls, type) {
+  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
+  if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
+  if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
+  return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
+    class: cls,
+    breakpoint: bp,
+    props: bp === "main" ? props : {},
+    variables: { "font-size": name }
+  }));
+}
+function surfaceStyles(cls, surface, spec) {
+  const props = {};
+  const vars = {};
+  if (surface.background) vars["background-color"] = variableName(surface.background);
+  if (surface.border) {
+    for (const side of SIDES) {
+      props[`border-${side}-width`] = `${surface.border.width}px`;
+      props[`border-${side}-style`] = "solid";
+      vars[`border-${side}-color`] = variableName(surface.border.color);
+    }
+  }
+  if (surface.radius !== void 0) {
+    for (const corner of CORNERS) props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
+    props.overflow = "hidden";
+  }
+  const padding = {};
+  for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
+    const token = surface.padding?.[axis];
+    if (!token) continue;
+    for (const [bp, { name }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
+      padding[bp] ??= {};
+      for (const side of sides) padding[bp][`padding-${side}`] = name;
+    }
+  }
+  const out = [{ class: cls, breakpoint: "main", props, variables: { ...vars, ...padding.main } }];
+  for (const [bp, variables] of Object.entries(padding)) {
+    if (bp !== "main") out.push({ class: cls, breakpoint: bp, props: {}, variables });
+  }
+  return out;
+}
+
 // src/lib/plan-setup.mjs
 var CONTAINERS_REM = { small: 48, medium: 64, large: 80 };
 var SECTION_DEFAULTS_PX = { small: 48, medium: 80, large: 128 };
 var WEIGHTS = { light: 300, normal: 400, medium: 500, semibold: 600, bold: 700 };
 var MAX_WIDTHS_REM = { small: 20, medium: 32, large: 48 };
-var SIDES = ["top", "right", "bottom", "left"];
+var SIDES2 = ["top", "right", "bottom", "left"];
 var VARIANT_PROPS = {
   background: ["background-color"],
   color: ["color"],
-  border: SIDES.map((s) => `border-${s}-color`)
+  border: SIDES2.map((s) => `border-${s}-color`)
 };
 function variantVariables(variant) {
   const out = {};
@@ -15455,10 +15512,8 @@ function planSetup(spec) {
   for (const type of spec.tokens.typography) {
     const [group, size] = type.name.split(".");
     const cls = group === "heading" ? `heading-style-${size}` : `text-size-${size}`;
-    const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
-    if (type.letterSpacing !== void 0) props["letter-spacing"] = `${type.letterSpacing}em`;
-    const names = sizeVariables("Typography", type.name, type.size, "-size");
-    for (const [bp, { name }] of Object.entries(names)) style(cls, bp, bp === "main" ? props : {}, { "font-size": name });
+    sizeVariables("Typography", type.name, type.size, "-size");
+    for (const entry of typographyStyles(cls, type)) style(cls, entry.breakpoint, entry.props, entry.variables);
   }
   for (const [token, value] of Object.entries(spec.tokens.spacing)) {
     if (token.startsWith("section.")) continue;
@@ -15466,13 +15521,13 @@ function planSetup(spec) {
     const names = sizeVariables("Spacing", token, value);
     for (const kind of ["margin", "padding"]) {
       for (const [bp, { name }] of Object.entries(names)) {
-        style(`${kind}-${size}`, bp, {}, Object.fromEntries(SIDES.map((side) => [`${kind}-${side}`, name])));
+        style(`${kind}-${size}`, bp, {}, Object.fromEntries(SIDES2.map((side) => [`${kind}-${side}`, name])));
       }
     }
   }
   for (const kind of ["margin", "padding"]) {
-    for (const side of SIDES) {
-      style(`${kind}-${side}`, "main", Object.fromEntries(SIDES.filter((s) => s !== side).map((s) => [`${kind}-${s}`, "0"])));
+    for (const side of SIDES2) {
+      style(`${kind}-${side}`, "main", Object.fromEntries(SIDES2.filter((s) => s !== side).map((s) => [`${kind}-${s}`, "0"])));
     }
     style(`${kind}-horizontal`, "main", { [`${kind}-top`]: "0", [`${kind}-bottom`]: "0" });
     style(`${kind}-vertical`, "main", { [`${kind}-left`]: "0", [`${kind}-right`]: "0" });
@@ -15489,35 +15544,7 @@ function planSetup(spec) {
   style("hide-mobile-landscape", "small", { display: "none" });
   style("hide-mobile-portrait", "tiny", { display: "none" });
   for (const [name, surface] of Object.entries(spec.tokens.surfaces ?? {})) {
-    const cls = `surface-${name}`;
-    const props = {};
-    const vars = {};
-    if (surface.background) vars["background-color"] = variableName(surface.background);
-    if (surface.border) {
-      for (const side of SIDES) {
-        props[`border-${side}-width`] = `${surface.border.width}px`;
-        props[`border-${side}-style`] = "solid";
-        vars[`border-${side}-color`] = variableName(surface.border.color);
-      }
-    }
-    if (surface.radius !== void 0) {
-      for (const corner of ["top-left", "top-right", "bottom-right", "bottom-left"]) {
-        props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
-      }
-      props.overflow = "hidden";
-    }
-    const padding = { main: {}, medium: {}, small: {} };
-    for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
-      const token = surface.padding?.[axis];
-      if (!token) continue;
-      for (const [bp, { name: variable }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
-        for (const side of sides) padding[bp][`padding-${side}`] = variable;
-      }
-    }
-    style(cls, "main", props, { ...vars, ...padding.main });
-    for (const bp of ["medium", "small"]) {
-      if (Object.keys(padding[bp]).length) style(cls, bp, {}, padding[bp]);
-    }
+    for (const entry of surfaceStyles(`surface-${name}`, surface, spec)) style(entry.class, entry.breakpoint, entry.props, entry.variables);
   }
   const button = spec.components.components.find((c) => c.name === "button");
   if (button) {
@@ -15529,7 +15556,7 @@ function planSetup(spec) {
       "padding-right": "1.5rem",
       "text-decoration": "none"
     };
-    for (const side of SIDES) {
+    for (const side of SIDES2) {
       base[`border-${side}-width`] = "1px";
       base[`border-${side}-style`] = "solid";
     }

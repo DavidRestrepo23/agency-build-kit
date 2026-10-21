@@ -15,11 +15,11 @@ description: Finsweet Client-First naming and structure rules used by this agenc
 |---|---|---|
 | Custom | `[folder]_[element]`, kebab parts, exactly one `_` | `section_hero`, `hero_component`, `hero_image-wrapper` |
 | Utility | closed list below | `padding-global`, `heading-style-h1`, `margin-bottom` |
-| Combo | `is-[kebab]`, stacked on a base class | `button is-secondary` |
+| Combo | `is-[kebab]`, stacked on a base class; only for `button` variants, created with properties by setup | `button is-secondary` |
 
 Utilities: `page-wrapper`, `main-wrapper`, `padding-global`, `container-*`, `padding-section-*`, `heading-style-h1..h6`, `text-size-*`, `text-weight-light|normal|medium|semibold|bold`, `text-color-*`, `background-color-*`, `text-align-*`, `text-rich-text`, `margin-|padding-` + `top|bottom|left|right|horizontal|vertical` or a size, `max-width-small|medium|large`, `hide-tablet|mobile-landscape|mobile-portrait`, `button`, `surface-*` (box styles from `tokens.yaml` surfaces).
 
-Spacing utilities combine: `margin-bottom margin-md` = bottom margin only.
+**Never stack utilities in a build.** Webflow stores any second class as a combo with empty properties, so `features_grid surface-card` or `text-size-large text-color-white` render without the utility's styles. Each element gets one class; when it needs more than its base utility, it gets its own `<folder>_<element>` class carrying the props (bound to variables). Utilities such as `surface-*`, `text-color-*`, `text-align-*` and spacing combos still exist for the style guide and manual work.
 
 ## site-spec → Client-First
 
@@ -33,7 +33,10 @@ Spacing utilities combine: `margin-bottom margin-md` = bottom margin only.
 | `group` `name` | `<id>_<name>` |
 | `button` variant ≠ primary | `button is-<variant>` |
 | image | `<id>_image-wrapper` > `<id>_image` |
-| `surface: card` on a group/section | `<class> surface-card` (global utility stacked on the element's own class) |
+| `surface: card` on a group/section | surface props written on the element's own class (`<id>_<name>` / `section_<id>`) |
+| `color` on heading/text | own class `<id>_<style>-<color>` with typography + color (e.g. `hero_text-large-neutral-black`); without color, the utility alone |
+| `layout.textAlign` | `text-align` written on the element's own class |
+| section | `<section id="<id>">` for anchor links |
 | token `brand.primary` | Webflow variable `brand-primary` |
 
 All of this is computed by `plan-section.mjs`; do not hand-roll class names.

@@ -37,7 +37,6 @@ function addCollapse(plan, ctx, name, collapse) {
 export function planComponent(spec, name) {
   const component = spec.components.components.find((c) => c.name === name);
   if (!component) throw new Error(`unknown component "${name}"`);
-  if (!component.children?.length) throw new Error(`component "${name}" has no children to build`);
 
   const plan = {
     component: name,
@@ -56,7 +55,19 @@ export function planComponent(spec, name) {
   ctx.custom.add(root);
   if (component.layout) plan.styles.push(...layoutStyles(root, component.layout, spec));
 
-  let inner = component.children.map((child) => renderChild(child, ctx)).join('');
+  let inner = (component.children ?? []).map((child) => renderChild(child, ctx)).join('');
+  if (!component.children?.length) {
+    // Props-only components (cards, items) have no structure in components.yaml: build the shell, report the gap.
+    const slot = `${name}_component-slot`;
+    ctx.custom.add(slot);
+    inner = `<div class="${slot}"></div>`;
+    plan.placeholders.push({
+      type: 'component-content',
+      targetClass: slot,
+      order: 1,
+      description: `component "${name}" has no children in components.yaml; build its content from Figma node ${component.figmaNode} (props: ${(component.props ?? []).join(', ') || 'none'})`,
+    });
+  }
   if (component.collapse) inner += addCollapse(plan, ctx, name, component.collapse);
 
   const tag = component.tag ?? 'div';

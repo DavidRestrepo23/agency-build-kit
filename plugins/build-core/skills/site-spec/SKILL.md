@@ -12,7 +12,7 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 | File | Who writes it | Content |
 |---|---|---|
 | `project.yaml` | `/build-core:build-audit` | name (kebab), `language` (`es`, `en`, `pt-BR`… — language for questions and reports), figma fileKey + url, platforms, `units: rem`, breakpoints, pages (slug + figmaNode) |
-| `tokens.yaml` | `/build-core:build-audit` | colors, typography, spacing, radii, shadows, fonts — values in **px** |
+| `tokens.yaml` | `/build-core:build-audit` | colors, typography (`letterSpacing` in px as in Figma, optional `textTransform: uppercase|lowercase|capitalize|none`), spacing, radii, shadows, fonts — values in **px** |
 | `components.yaml` | `/build-core:build-audit` | repeated pieces (button, card, navbar, footer) with variants and color-token styles |
 | `pages/<slug>.yaml` | `figma-auditor` | ordered sections → neutral element tree |
 | `assets/manifest.yaml` + files | `/build-core:build-audit` | svg / raster@2x exports |
@@ -23,7 +23,7 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 
 1. **Neutral.** Never write platform class names (`heading-style-h1`, `section_hero`). Use semantic roles: `heading.h1`, `text.large`, `section.large`, `space.md`, `container: large`.
 2. **Token names:** `group.name` lowercase kebab parts (`brand.primary`). Typography: `heading.h1`–`heading.h6` or `text.<size>`. Spacing: `section.small|medium|large` or `space.<size>`; `space.top|bottom|left|right|horizontal|vertical|global|section-small|section-medium|section-large` are reserved. Radii: use `radii.button` for the button corner radius (other radii keys are informational).
-3. **Responsive values:** a number, or `{ desktop, tablet?, mobile? }`. Missing `tablet` inherits `desktop`; missing `mobile` inherits `tablet`.
+3. **Responsive values:** a number, or `{ desktop, tablet?, mobileLandscape?, mobile? }` (Webflow 991 / 767 / 478 px). Missing `tablet` inherits `desktop`; missing `mobileLandscape` inherits `mobile` (so `mobile` applies from 767px down), then `tablet`; missing `mobile` inherits `mobileLandscape`.
 4. **Ids:** section `id`, group `name`, asset `id`, component `name`: lowercase kebab-case, unique in their scope. Group names `component`, `image`, `image-wrapper`, `icon`, `link`, `list`, `list-item`, `form`, `embed-placeholder` and anything ending in `-slot` are reserved.
 5. **Never invent copy.** Placeholder text repeated across instances → add an open question instead.
 6. **Assets:** logos/icons `kind: svg`; photos/mockups `kind: raster` with `scale: 2`. Manifest `file` is a file name relative to `site-spec/assets/` (e.g. `hero-mockup@2x.png`, not `assets/hero-mockup@2x.png`).
@@ -63,7 +63,7 @@ A raster below 2x needs `scaleApproved: "<reason>"` in the manifest (approved by
 
 ## Child types
 
-`heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, children) · `component` (ref, variant?, text?, href?, props?) · `form` (description) · `embed-placeholder` (description)
+`heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph; `**bold**` → `<strong>`, `*italic*` → `<em>`, everything else is escaped) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, children) · `component` (ref, variant?, text?, href?, props? — `text`/`href` are passed to the instance as props) · `form` (description) · `embed-placeholder` (description)
 
 Layout: `{ type: grid|flex|stack, columns?, gap?, direction?, align?, justify? }` — `gap` is a spacing token.
 

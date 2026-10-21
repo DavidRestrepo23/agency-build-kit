@@ -2,8 +2,9 @@ import { changedBreakpoints, resolveResponsive } from './responsive.mjs';
 import { responsiveVariableNames, variableName } from './variables.mjs';
 import { primaryVariantName } from './components.mjs';
 import { sectionHash } from './spec-hash.mjs';
+import { mergeStyles, surfaceStyles, typographyStyles } from './styles.mjs';
 
-const BREAKPOINTS = ['main', 'medium', 'small'];
+const BREAKPOINTS = ['main', 'medium', 'small', 'tiny'];
 
 export function escapeHtml(text) {
   return String(text)
@@ -14,8 +15,8 @@ export function escapeHtml(text) {
 }
 
 export function layoutStyles(cls, layout, spec) {
-  const props = { main: {}, medium: {}, small: {} };
-  const vars = { main: {}, medium: {}, small: {} };
+  const props = { main: {}, medium: {}, small: {}, tiny: {} };
+  const vars = { main: {}, medium: {}, small: {}, tiny: {} };
   if (layout.type === 'grid') {
     props.main.display = 'grid';
     for (const [bp, n] of changedBreakpoints(resolveResponsive(layout.columns ?? 1))) {
@@ -73,26 +74,45 @@ function renderButton(child, ctx) {
   return `<a class="${classes.join(' ')}" href="${escapeHtml(child.href ?? '#')}">${escapeHtml(child.text ?? '')}</a>`;
 }
 
-// Stacks the optional text color utility (Client-First text-color-*) on text-like children.
-function withTextColor(cls, child, ctx) {
-  if (!child.color) return cls;
-  const utility = `text-color-${variableName(child.color)}`;
-  ctx.utilities.add(utility);
-  return `${cls} ${utility}`;
+// Webflow turns a second class into an empty combo, so global utilities are never stacked:
+// when an element needs more than its base utility, it gets its own class carrying the props.
+function addStyles(ctx, entries) {
+  mergeStyles(ctx.plan.styles, entries);
 }
 
-// Stacks the optional text-align-* utility declared on a layout.
+// Text-like child: the typography utility alone, or an own class with typography + color.
+function textClass(utility, child, ctx) {
+  if (!child.color) {
+    ctx.utilities.add(utility);
+    return utility;
+  }
+  const type = ctx.spec.tokens.typography.find((t) => t.name === child.style);
+  const role = child.style.replace('.', '-');
+  const cls = `${ctx.section.id}_${role}-${variableName(child.color)}`;
+  if (!ctx.custom.has(cls)) {
+    ctx.custom.add(cls);
+    addStyles(ctx, [...typographyStyles(cls, type), { class: cls, breakpoint: 'main', props: {}, variables: { color: variableName(child.color) } }]);
+  }
+  return cls;
+}
+
+// Writes layout.textAlign on the element's own class.
 export function withTextAlign(cls, layout, ctx) {
-  if (!layout?.textAlign) return cls;
-  const utility = `text-align-${layout.textAlign}`;
-  ctx.utilities.add(utility);
-  return `${cls} ${utility}`;
+  if (layout?.textAlign) addStyles(ctx, [{ class: cls, breakpoint: 'main', props: { 'text-align': layout.textAlign }, variables: {} }]);
+  return cls;
 }
 
+// Writes the surface's box styles on the element's own class.
 export function withSurface(cls, surface, ctx) {
-  if (!surface) return cls;
-  ctx.utilities.add(`surface-${surface}`);
-  return `${cls} surface-${surface}`;
+  if (surface) addStyles(ctx, surfaceStyles(cls, ctx.spec.tokens.surfaces[surface], ctx.spec));
+  return cls;
+}
+
+// Rich text keeps copy escaped; only **bold** and *italic* become tags.
+function richTextHtml(text) {
+  return escapeHtml(text)
+    .replace(/\*\*(\S(?:.*?\S)?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(\S(?:.*?\S)?)\*/g, '<em>$1</em>');
 }
 
 export function createContext(spec, section, plan) {
@@ -103,19 +123,24 @@ export function renderChild(child, ctx) {
   const id = ctx.section.id;
   switch (child.type) {
     case 'heading': {
-      const cls = `heading-style-${child.style.split('.')[1]}`;
-      ctx.utilities.add(cls);
-      return `<h${child.level} class="${withTextColor(cls, child, ctx)}">${escapeHtml(child.text)}</h${child.level}>`;
+      const cls = textClass(`heading-style-${child.style.split('.')[1]}`, child, ctx);
+      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
     }
     case 'text': {
-      const cls = `text-size-${child.style.split('.')[1]}`;
-      ctx.utilities.add(cls);
-      return `<p class="${withTextColor(cls, child, ctx)}">${escapeHtml(child.text)}</p>`;
+      const cls = textClass(`text-size-${child.style.split('.')[1]}`, child, ctx);
+      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
     }
     case 'rich-text': {
-      ctx.utilities.add('text-rich-text');
-      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${escapeHtml(p.trim())}</p>`).join('');
-      return `<div class="${withTextColor('text-rich-text', child, ctx)}">${paragraphs}</div>`;
+      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${richTextHtml(p.trim())}</p>`).join('');
+      let cls = 'text-rich-text';
+      if (child.color) {
+        cls = `${id}_rich-text-${variableName(child.color)}`;
+        ctx.custom.add(cls);
+        addStyles(ctx, [{ class: cls, breakpoint: 'main', props: {}, variables: { color: variableName(child.color) } }]);
+      } else {
+        ctx.utilities.add(cls);
+      }
+      return `<div class="${cls}">${paragraphs}</div>`;
     }
     case 'image': {
       const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
@@ -145,14 +170,17 @@ export function renderChild(child, ctx) {
     case 'group': {
       const cls = `${id}_${child.name}`;
       ctx.custom.add(cls);
-      if (child.layout) ctx.plan.styles.push(...layoutStyles(cls, child.layout, ctx.spec));
+      if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
       return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join('')}</div>`;
     }
     case 'component': {
       if (child.ref === 'button') return renderButton(child, ctx);
       const cls = `${id}_${child.ref}-slot`;
       ctx.custom.add(cls);
-      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props: child.props ?? {}, targetClass: cls, order: nextOrder(ctx, cls) });
+      const props = { ...(child.props ?? {}) };
+      if (child.text !== undefined) props.text = child.text;
+      if (child.href !== undefined) props.href = child.href;
+      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props, targetClass: cls, order: nextOrder(ctx, cls) });
       return `<div class="${cls}"></div>`;
     }
     case 'form':
@@ -195,9 +223,9 @@ export function planSection(spec, pageSlug, sectionId) {
   ctx.utilities.add('padding-global');
 
   if (section.background) {
-    plan.styles.push({ class: sectionClass, breakpoint: 'main', props: {}, variables: { 'background-color': variableName(section.background) } });
+    addStyles(ctx, [{ class: sectionClass, breakpoint: 'main', props: {}, variables: { 'background-color': variableName(section.background) } }]);
   }
-  if (section.layout) plan.styles.push(...layoutStyles(componentClass, section.layout, spec));
+  if (section.layout) addStyles(ctx, layoutStyles(componentClass, section.layout, spec));
 
   let inner = section.children.map((child) => renderChild(child, ctx)).join('');
   if (section.needsCodeComponent) {
@@ -225,7 +253,7 @@ export function planSection(spec, pageSlug, sectionId) {
     ctx.utilities.add(cls);
     body = `<div class="${cls}">${body}</div>`;
   }
-  plan.whtml = `<section class="${withSurface(sectionClass, section.surface, ctx)}"><div class="padding-global">${body}</div></section>`;
+  plan.whtml = `<section id="${section.id}" class="${withSurface(sectionClass, section.surface, ctx)}"><div class="padding-global">${body}</div></section>`;
   plan.classesToCreate = [...ctx.custom];
   plan.utilitiesUsed = [...ctx.utilities].sort();
   return plan;

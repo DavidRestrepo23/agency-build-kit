@@ -129,3 +129,15 @@ test('page: page-wrapper gets base background, color and text', () => {
   assert.deepEqual(wrapper[0].props, { 'font-family': 'Inter', 'font-weight': '400', 'line-height': '1.5' });
   assert.deepEqual(wrapper[0].variables, { 'background-color': 'neutral-white', color: 'neutral-black', 'font-size': 'text-regular-size' });
 });
+
+test('report: letterSpacing is px in the spec and becomes em relative to the desktop size', () => {
+  const h1 = setup.styles.find((s) => s.class === 'heading-style-h1' && s.breakpoint === 'main');
+  assert.equal(h1.props['letter-spacing'], '-0.02em');
+  const large = setup.styles.find((s) => s.class === 'text-size-large' && s.breakpoint === 'main');
+  assert.equal(large.props['letter-spacing'], '0.12em');
+});
+
+test('report: textTransform reaches the typography class', () => {
+  const large = setup.styles.find((s) => s.class === 'text-size-large' && s.breakpoint === 'main');
+  assert.equal(large.props['text-transform'], 'uppercase');
+});

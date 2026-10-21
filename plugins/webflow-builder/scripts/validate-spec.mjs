@@ -14298,6 +14298,7 @@ var common_schema_default = {
           properties: {
             desktop: { type: "number" },
             tablet: { type: "number" },
+            mobileLandscape: { type: "number" },
             mobile: { type: "number" }
           }
         }
@@ -14438,7 +14439,11 @@ var tokens_schema_default = {
             type: "number"
           },
           letterSpacing: {
-            type: "number"
+            type: "number",
+            description: "px, as in Figma; converted to em relative to the desktop size"
+          },
+          textTransform: {
+            enum: ["none", "uppercase", "lowercase", "capitalize"]
           },
           figmaVar: {
             type: "string"

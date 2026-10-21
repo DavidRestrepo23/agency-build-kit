@@ -101,6 +101,14 @@ test('final review: section order different from spec is flagged', () => {
 
 test('final review 1.1: planned class missing from the built section is high severity', () => {
   const dump = goodDump();
-  dump.sections[1].classes = dump.sections[1].classes.filter((c) => c !== 'surface-card');
-  assert.ok(checkStructure(spec, 'home', dump).findings.some((f) => f.severity === 'high' && f.section === 'features' && /class "surface-card" from plan not found/.test(f.message)));
+  dump.sections[1].classes = dump.sections[1].classes.filter((c) => c !== 'features_grid');
+  assert.ok(checkStructure(spec, 'home', dump).findings.some((f) => f.severity === 'high' && f.section === 'features' && /class "features_grid" from plan not found/.test(f.message)));
+});
+
+test('report: an empty combo class is high severity', () => {
+  const dump = goodDump();
+  dump.styles.push({ name: 'features_grid surface-card', breakpoint: 'main', isComboClass: true, props: {}, variables: {} });
+  dump.styles.push({ name: 'button is-secondary', breakpoint: 'main', isComboClass: true, props: {}, variables: { color: 'brand-primary' } });
+  const findings = checkStructure(spec, 'home', dump).findings;
+  assert.deepEqual(findings.filter((f) => /empty combo/.test(f.message)).map((f) => [f.severity, f.section]), [['high', 'features']]);
 });

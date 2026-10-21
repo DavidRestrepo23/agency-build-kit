@@ -76,7 +76,11 @@
             "type": "number"
           },
           "letterSpacing": {
-            "type": "number"
+            "type": "number",
+            "description": "px, as in Figma; converted to em relative to the desktop size"
+          },
+          "textTransform": {
+            "enum": ["none", "uppercase", "lowercase", "capitalize"]
           },
           "figmaVar": {
             "type": "string"

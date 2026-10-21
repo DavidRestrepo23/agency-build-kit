@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'yaml';
 
@@ -89,7 +89,7 @@ for (const plugin of PLUGINS) {
   test(`${plugin}: agents have matching name and description`, () => {
     for (const file of markdownFiles(join(dir, 'agents'))) {
       const fm = frontmatter(file);
-      assert.equal(`${fm.name}.md`, file.split('/').pop());
+      assert.equal(`${fm.name}.md`, basename(file));
       assert.ok(fm.description?.length > 20, file);
     }
   });

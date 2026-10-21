@@ -39,9 +39,17 @@ test('collapse: burger, menu hiding and click interaction for the chosen breakpo
   }]);
 });
 
-test('component: unknown name or component without children throws', () => {
+test('component: unknown name throws', () => {
   assert.throws(() => planComponent(spec, 'ghost'), /unknown component "ghost"/);
-  assert.throws(() => planComponent(spec, 'card'), /component "card" has no children/);
+});
+
+test('report: component without children is accepted as an empty shell with a placeholder', () => {
+  const plan = planComponent(spec, 'card');
+  assert.equal(plan.whtml, '<div class="card_component"><div class="card_component-slot"></div></div>');
+  assert.deepEqual(plan.classesToCreate, ['card_component', 'card_component-slot']);
+  assert.equal(plan.placeholders.length, 1);
+  assert.equal(plan.placeholders[0].type, 'component-content');
+  assert.match(plan.placeholders[0].description, /card.*no children.*2:10/);
 });
 
 test('validation: fixture with a buildable navbar is valid', () => {

@@ -12,9 +12,11 @@ export function collectRefs(section) {
   const tokens = new Set();
   const components = new Set();
   const assets = new Set();
+  const surfaces = new Set();
   const visit = (node) => {
     if (!node || typeof node !== 'object') return;
-    for (const key of ['spacing', 'background', 'style']) if (typeof node[key] === 'string') tokens.add(node[key]);
+    for (const key of ['spacing', 'background', 'style', 'color']) if (typeof node[key] === 'string') tokens.add(node[key]);
+    if (typeof node.surface === 'string') surfaces.add(node.surface);
     if (node.layout?.gap) tokens.add(node.layout.gap);
     if (node.type === 'component') components.add(node.ref);
     if (node.type === 'button') components.add('button');
@@ -22,7 +24,7 @@ export function collectRefs(section) {
     for (const child of node.children ?? []) visit(child);
   };
   visit(section);
-  return { tokens: [...tokens].sort(), components: [...components].sort(), assets: [...assets].sort() };
+  return { tokens: [...tokens].sort(), components: [...components].sort(), assets: [...assets].sort(), surfaces: [...surfaces].sort() };
 }
 
 export function sectionHash(section, spec) {
@@ -35,6 +37,8 @@ export function sectionHash(section, spec) {
     spacing: Object.fromEntries(Object.entries(spec.tokens.spacing).filter(([k]) => tokens.has(k))),
     components: spec.components.components.filter((c) => refs.components.includes(c.name)),
     assets: spec.assets.assets.filter((a) => refs.assets.includes(a.id)),
+    // Surface box styles are written on the section's own classes, so their definition is part of the build.
+    surfaces: Object.fromEntries(refs.surfaces.map((name) => [name, spec.tokens.surfaces?.[name] ?? null])),
   };
   return `sha256:${createHash('sha256').update(stableStringify(payload)).digest('hex')}`;
 }

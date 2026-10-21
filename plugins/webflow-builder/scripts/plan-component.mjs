@@ -14298,6 +14298,7 @@ var common_schema_default = {
           properties: {
             desktop: { type: "number" },
             tablet: { type: "number" },
+            mobileLandscape: { type: "number" },
             mobile: { type: "number" }
           }
         }
@@ -14438,7 +14439,11 @@ var tokens_schema_default = {
             type: "number"
           },
           letterSpacing: {
-            type: "number"
+            type: "number",
+            description: "px, as in Figma; converted to em relative to the desktop size"
+          },
+          textTransform: {
+            enum: ["none", "uppercase", "lowercase", "capitalize"]
           },
           figmaVar: {
             type: "string"
@@ -15356,13 +15361,14 @@ function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
 // src/lib/responsive.mjs
 function resolveResponsive(value) {
   if (typeof value === "number" || typeof value === "string") {
-    return { main: value, medium: value, small: value };
+    return { main: value, medium: value, small: value, tiny: value };
   }
   if (value && typeof value === "object" && "desktop" in value) {
     const main = value.desktop;
     const medium = value.tablet ?? main;
-    const small = value.mobile ?? medium;
-    return { main, medium, small };
+    const small = value.mobileLandscape ?? value.mobile ?? medium;
+    const tiny = value.mobile ?? small;
+    return { main, medium, small, tiny };
   }
   throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
 }
@@ -15370,6 +15376,7 @@ function changedBreakpoints(resolved) {
   const out = [["main", resolved.main]];
   if (resolved.medium !== resolved.main) out.push(["medium", resolved.medium]);
   if (resolved.small !== resolved.medium) out.push(["small", resolved.small]);
+  if (resolved.tiny !== void 0 && resolved.tiny !== resolved.small) out.push(["tiny", resolved.tiny]);
   return out;
 }
 
@@ -15382,7 +15389,9 @@ function responsiveVariableNames(token, value, suffix = "") {
   const base = variableName(token) + suffix;
   const out = { main: { name: base, value: resolved.main } };
   if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
-  if (resolved.small !== resolved.medium) out.small = { name: `${base}-mobile`, value: resolved.small };
+  const landscape = value && typeof value === "object" && value.mobileLandscape !== void 0;
+  if (resolved.small !== resolved.medium) out.small = { name: `${base}-${landscape ? "mobile-landscape" : "mobile"}`, value: resolved.small };
+  if (resolved.tiny !== resolved.small) out.tiny = { name: `${base}-mobile`, value: resolved.tiny };
   return out;
 }
 
@@ -15392,14 +15401,83 @@ function primaryVariantName(component) {
   return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
 }
 
+// src/lib/units.mjs
+function pxToRem(px) {
+  if (typeof px !== "number" || Number.isNaN(px)) {
+    throw new TypeError(`pxToRem expects a number, got ${JSON.stringify(px)}`);
+  }
+  return `${Number((px / 16).toFixed(4))}rem`;
+}
+
+// src/lib/styles.mjs
+var SIDES = ["top", "right", "bottom", "left"];
+var CORNERS = ["top-left", "top-right", "bottom-right", "bottom-left"];
+function letterSpacingEm(type) {
+  const size = resolveResponsive(type.size).main;
+  return `${Number((type.letterSpacing / size).toFixed(4))}em`;
+}
+function typographyStyles(cls, type) {
+  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
+  if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
+  if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
+  return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
+    class: cls,
+    breakpoint: bp,
+    props: bp === "main" ? props : {},
+    variables: { "font-size": name }
+  }));
+}
+function surfaceStyles(cls, surface, spec) {
+  const props = {};
+  const vars = {};
+  if (surface.background) vars["background-color"] = variableName(surface.background);
+  if (surface.border) {
+    for (const side of SIDES) {
+      props[`border-${side}-width`] = `${surface.border.width}px`;
+      props[`border-${side}-style`] = "solid";
+      vars[`border-${side}-color`] = variableName(surface.border.color);
+    }
+  }
+  if (surface.radius !== void 0) {
+    for (const corner of CORNERS) props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
+    props.overflow = "hidden";
+  }
+  const padding = {};
+  for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
+    const token = surface.padding?.[axis];
+    if (!token) continue;
+    for (const [bp, { name }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
+      padding[bp] ??= {};
+      for (const side of sides) padding[bp][`padding-${side}`] = name;
+    }
+  }
+  const out = [{ class: cls, breakpoint: "main", props, variables: { ...vars, ...padding.main } }];
+  for (const [bp, variables] of Object.entries(padding)) {
+    if (bp !== "main") out.push({ class: cls, breakpoint: bp, props: {}, variables });
+  }
+  return out;
+}
+function mergeStyles(list, entries) {
+  for (const entry of entries) {
+    const existing = list.find((s) => s.class === entry.class && s.breakpoint === entry.breakpoint && s.comboOf === entry.comboOf);
+    if (existing) {
+      Object.assign(existing.props, entry.props);
+      Object.assign(existing.variables, entry.variables);
+    } else {
+      list.push({ ...entry, props: { ...entry.props }, variables: { ...entry.variables } });
+    }
+  }
+  return list;
+}
+
 // src/lib/plan-section.mjs
-var BREAKPOINTS = ["main", "medium", "small"];
+var BREAKPOINTS = ["main", "medium", "small", "tiny"];
 function escapeHtml(text) {
   return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 function layoutStyles(cls, layout, spec) {
-  const props = { main: {}, medium: {}, small: {} };
-  const vars = { main: {}, medium: {}, small: {} };
+  const props = { main: {}, medium: {}, small: {}, tiny: {} };
+  const vars = { main: {}, medium: {}, small: {}, tiny: {} };
   if (layout.type === "grid") {
     props.main.display = "grid";
     for (const [bp, n] of changedBreakpoints(resolveResponsive(layout.columns ?? 1))) {
@@ -15450,22 +15528,33 @@ function renderButton(child, ctx) {
   }
   return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}">${escapeHtml(child.text ?? "")}</a>`;
 }
-function withTextColor(cls, child, ctx) {
-  if (!child.color) return cls;
-  const utility = `text-color-${variableName(child.color)}`;
-  ctx.utilities.add(utility);
-  return `${cls} ${utility}`;
+function addStyles(ctx, entries) {
+  mergeStyles(ctx.plan.styles, entries);
+}
+function textClass(utility, child, ctx) {
+  if (!child.color) {
+    ctx.utilities.add(utility);
+    return utility;
+  }
+  const type = ctx.spec.tokens.typography.find((t) => t.name === child.style);
+  const role = child.style.replace(".", "-");
+  const cls = `${ctx.section.id}_${role}-${variableName(child.color)}`;
+  if (!ctx.custom.has(cls)) {
+    ctx.custom.add(cls);
+    addStyles(ctx, [...typographyStyles(cls, type), { class: cls, breakpoint: "main", props: {}, variables: { color: variableName(child.color) } }]);
+  }
+  return cls;
 }
 function withTextAlign(cls, layout, ctx) {
-  if (!layout?.textAlign) return cls;
-  const utility = `text-align-${layout.textAlign}`;
-  ctx.utilities.add(utility);
-  return `${cls} ${utility}`;
+  if (layout?.textAlign) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { "text-align": layout.textAlign }, variables: {} }]);
+  return cls;
 }
 function withSurface(cls, surface, ctx) {
-  if (!surface) return cls;
-  ctx.utilities.add(`surface-${surface}`);
-  return `${cls} surface-${surface}`;
+  if (surface) addStyles(ctx, surfaceStyles(cls, ctx.spec.tokens.surfaces[surface], ctx.spec));
+  return cls;
+}
+function richTextHtml(text) {
+  return escapeHtml(text).replace(/\*\*(\S(?:.*?\S)?)\*\*/g, "<strong>$1</strong>").replace(/\*(\S(?:.*?\S)?)\*/g, "<em>$1</em>");
 }
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
@@ -15474,19 +15563,24 @@ function renderChild(child, ctx) {
   const id = ctx.section.id;
   switch (child.type) {
     case "heading": {
-      const cls = `heading-style-${child.style.split(".")[1]}`;
-      ctx.utilities.add(cls);
-      return `<h${child.level} class="${withTextColor(cls, child, ctx)}">${escapeHtml(child.text)}</h${child.level}>`;
+      const cls = textClass(`heading-style-${child.style.split(".")[1]}`, child, ctx);
+      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
     }
     case "text": {
-      const cls = `text-size-${child.style.split(".")[1]}`;
-      ctx.utilities.add(cls);
-      return `<p class="${withTextColor(cls, child, ctx)}">${escapeHtml(child.text)}</p>`;
+      const cls = textClass(`text-size-${child.style.split(".")[1]}`, child, ctx);
+      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
     }
     case "rich-text": {
-      ctx.utilities.add("text-rich-text");
-      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${escapeHtml(p.trim())}</p>`).join("");
-      return `<div class="${withTextColor("text-rich-text", child, ctx)}">${paragraphs}</div>`;
+      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${richTextHtml(p.trim())}</p>`).join("");
+      let cls = "text-rich-text";
+      if (child.color) {
+        cls = `${id}_rich-text-${variableName(child.color)}`;
+        ctx.custom.add(cls);
+        addStyles(ctx, [{ class: cls, breakpoint: "main", props: {}, variables: { color: variableName(child.color) } }]);
+      } else {
+        ctx.utilities.add(cls);
+      }
+      return `<div class="${cls}">${paragraphs}</div>`;
     }
     case "image": {
       const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
@@ -15516,14 +15610,17 @@ function renderChild(child, ctx) {
     case "group": {
       const cls = `${id}_${child.name}`;
       ctx.custom.add(cls);
-      if (child.layout) ctx.plan.styles.push(...layoutStyles(cls, child.layout, ctx.spec));
+      if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
       return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
     }
     case "component": {
       if (child.ref === "button") return renderButton(child, ctx);
       const cls = `${id}_${child.ref}-slot`;
       ctx.custom.add(cls);
-      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props: child.props ?? {}, targetClass: cls, order: nextOrder(ctx, cls) });
+      const props = { ...child.props ?? {} };
+      if (child.text !== void 0) props.text = child.text;
+      if (child.href !== void 0) props.href = child.href;
+      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props, targetClass: cls, order: nextOrder(ctx, cls) });
       return `<div class="${cls}"></div>`;
     }
     case "form":
@@ -15574,7 +15671,6 @@ function addCollapse(plan, ctx, name, collapse) {
 function planComponent(spec, name) {
   const component = spec.components.components.find((c) => c.name === name);
   if (!component) throw new Error(`unknown component "${name}"`);
-  if (!component.children?.length) throw new Error(`component "${name}" has no children to build`);
   const plan = {
     component: name,
     classesToCreate: [],
@@ -15590,7 +15686,18 @@ function planComponent(spec, name) {
   const root = `${name}_component`;
   ctx.custom.add(root);
   if (component.layout) plan.styles.push(...layoutStyles(root, component.layout, spec));
-  let inner = component.children.map((child) => renderChild(child, ctx)).join("");
+  let inner = (component.children ?? []).map((child) => renderChild(child, ctx)).join("");
+  if (!component.children?.length) {
+    const slot = `${name}_component-slot`;
+    ctx.custom.add(slot);
+    inner = `<div class="${slot}"></div>`;
+    plan.placeholders.push({
+      type: "component-content",
+      targetClass: slot,
+      order: 1,
+      description: `component "${name}" has no children in components.yaml; build its content from Figma node ${component.figmaNode} (props: ${(component.props ?? []).join(", ") || "none"})`
+    });
+  }
   if (component.collapse) inner += addCollapse(plan, ctx, name, component.collapse);
   const tag = component.tag ?? "div";
   plan.whtml = `<${tag} class="${withTextAlign(withSurface(root, component.surface, ctx), component.layout, ctx)}">${inner}</${tag}>`;

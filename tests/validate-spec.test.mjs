@@ -230,3 +230,9 @@ test('project.yaml rejects a language that is not a code', () => {
   editYaml(dir, 'project.yaml', (p) => { p.language = 'Spanish'; });
   assert.ok(errorsFor(dir).some((e) => e.file === 'project.yaml' && e.path === '/language'), JSON.stringify(errorsFor(dir)));
 });
+
+test('report: textTransform must be a CSS text-transform keyword', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'tokens.yaml', (t) => { t.typography[0].textTransform = 'shout'; });
+  assert.ok(errorsFor(dir).some((e) => e.file === 'tokens.yaml' && e.path === '/typography/0/textTransform'), JSON.stringify(errorsFor(dir)));
+});

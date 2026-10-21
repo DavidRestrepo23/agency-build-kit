@@ -1,6 +1,7 @@
 import { pxToRem } from './units.mjs';
 import { responsiveVariableNames, variableName } from './variables.mjs';
 import { primaryVariantName } from './components.mjs';
+import { surfaceStyles, typographyStyles } from './styles.mjs';
 
 const CONTAINERS_REM = { small: 48, medium: 64, large: 80 };
 const SECTION_DEFAULTS_PX = { small: 48, medium: 80, large: 128 };
@@ -69,10 +70,8 @@ export function planSetup(spec) {
   for (const type of spec.tokens.typography) {
     const [group, size] = type.name.split('.');
     const cls = group === 'heading' ? `heading-style-${size}` : `text-size-${size}`;
-    const props = { 'font-family': type.family, 'font-weight': String(type.weight), 'line-height': String(type.lineHeight) };
-    if (type.letterSpacing !== undefined) props['letter-spacing'] = `${type.letterSpacing}em`;
-    const names = sizeVariables('Typography', type.name, type.size, '-size');
-    for (const [bp, { name }] of Object.entries(names)) style(cls, bp, bp === 'main' ? props : {}, { 'font-size': name });
+    sizeVariables('Typography', type.name, type.size, '-size');
+    for (const entry of typographyStyles(cls, type)) style(cls, entry.breakpoint, entry.props, entry.variables);
   }
 
   for (const [token, value] of Object.entries(spec.tokens.spacing)) {
@@ -106,35 +105,7 @@ export function planSetup(spec) {
   style('hide-mobile-portrait', 'tiny', { display: 'none' });
 
   for (const [name, surface] of Object.entries(spec.tokens.surfaces ?? {})) {
-    const cls = `surface-${name}`;
-    const props = {};
-    const vars = {};
-    if (surface.background) vars['background-color'] = variableName(surface.background);
-    if (surface.border) {
-      for (const side of SIDES) {
-        props[`border-${side}-width`] = `${surface.border.width}px`;
-        props[`border-${side}-style`] = 'solid';
-        vars[`border-${side}-color`] = variableName(surface.border.color);
-      }
-    }
-    if (surface.radius !== undefined) {
-      for (const corner of ['top-left', 'top-right', 'bottom-right', 'bottom-left']) {
-        props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
-      }
-      props.overflow = 'hidden';
-    }
-    const padding = { main: {}, medium: {}, small: {} };
-    for (const [axis, sides] of [['y', ['top', 'bottom']], ['x', ['left', 'right']]]) {
-      const token = surface.padding?.[axis];
-      if (!token) continue;
-      for (const [bp, { name: variable }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
-        for (const side of sides) padding[bp][`padding-${side}`] = variable;
-      }
-    }
-    style(cls, 'main', props, { ...vars, ...padding.main });
-    for (const bp of ['medium', 'small']) {
-      if (Object.keys(padding[bp]).length) style(cls, bp, {}, padding[bp]);
-    }
+    for (const entry of surfaceStyles(`surface-${name}`, surface, spec)) style(entry.class, entry.breakpoint, entry.props, entry.variables);
   }
 
   const button = spec.components.components.find((c) => c.name === 'button');
