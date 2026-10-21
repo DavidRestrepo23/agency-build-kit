@@ -49,6 +49,12 @@ export function checkStructure(spec, pageSlug, dump) {
       for (const cls of [...plan.classesToCreate, ...plan.utilitiesUsed]) {
         if (!(section.classes ?? []).includes(cls)) add('high', `class "${cls}" from plan not found in Webflow`, section.id);
       }
+      for (const native of plan.natives) {
+        const built = (section.natives ?? []).filter((n) => n.type === native.type && n.targetClass === native.targetClass)[native.order - 1];
+        const expected = native.items.length;
+        if (!built) add('high', `native ${native.type} inside "${native.targetClass}" not found in Webflow (behavior not built)`, section.id);
+        else if (expected && built.items !== expected) add('high', `native ${native.type} inside "${native.targetClass}": ${expected} items expected, found ${built.items}`, section.id);
+      }
     }
     for (const cls of section.classes ?? []) {
       const result = validateClassName(cls);

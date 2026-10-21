@@ -48,6 +48,7 @@ export function planComponent(spec, name) {
     components: [],
     interactions: [],
     placeholders: [],
+    natives: [],
   };
   // The component name is the Client-First folder (navbar_*), like a section id.
   const ctx = createContext(spec, { id: name }, plan);

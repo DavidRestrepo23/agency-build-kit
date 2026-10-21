@@ -7707,6 +7707,84 @@ function withSurface(cls, surface, ctx) {
 function richTextHtml(text) {
   return escapeHtml(text).replace(/\*\*(\S(?:.*?\S)?)\*\*/g, "<strong>$1</strong>").replace(/\*(\S(?:.*?\S)?)\*/g, "<em>$1</em>");
 }
+var renderAll = (children, ctx) => (children ?? []).map((c) => renderChild(c, ctx)).join("");
+function own(ctx, cls) {
+  ctx.custom.add(cls);
+  return cls;
+}
+function renderBehavior(child, cls, ctx) {
+  const b = child.behavior;
+  const box = (inner = "") => `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${inner}</div>`;
+  const native = (type, extra) => {
+    ctx.plan.natives.push({ type, targetClass: cls, order: nextOrder(ctx, cls), ...extra });
+    return box();
+  };
+  const pick = (keys) => Object.fromEntries(keys.filter((k) => b[k] !== void 0).map((k) => [k, b[k]]));
+  switch (b.type) {
+    case "slider": {
+      const slide = own(ctx, `${cls}-slide`);
+      const widths = changedBreakpoints(resolveResponsive(b.perView ?? 1)).map(([bp, n]) => ({ class: slide, breakpoint: bp, props: { width: `${Number((100 / n).toFixed(4))}%` }, variables: {} }));
+      addStyles(ctx, widths);
+      if (child.layout) addStyles(ctx, layoutStyles(slide, child.layout, ctx.spec));
+      return native("Slider", {
+        options: pick(["arrows", "dots", "autoplay", "interval", "loop"]),
+        classes: { slide },
+        items: child.children.map((c) => ({ whtml: renderChild(c, ctx) }))
+      });
+    }
+    case "tabs":
+      return native("Tabs", {
+        options: {},
+        classes: { menu: own(ctx, `${cls}-menu`), tab: own(ctx, `${cls}-tab`), pane: own(ctx, `${cls}-pane`) },
+        items: child.children.map((c, i) => ({ label: b.labels[i], whtml: renderChild(c, ctx) }))
+      });
+    case "accordion": {
+      const content = own(ctx, `${cls}-content`);
+      addStyles(ctx, [{ class: content, breakpoint: "main", props: { position: "static", display: "block" }, variables: {} }]);
+      return native("Dropdown", {
+        options: { mode: "accordion" },
+        classes: { item: own(ctx, `${cls}-item`), toggle: own(ctx, `${cls}-toggle`), content },
+        items: child.children.map((item) => ({
+          toggle: renderChild(item.children[0], ctx),
+          content: renderAll(item.children.slice(1), ctx)
+        }))
+      });
+    }
+    case "lightbox":
+      return native("Lightbox", { options: { url: b.url }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
+    case "video":
+      return native(/youtube\.com|youtu\.be/.test(b.url) ? "YouTubeVideo" : "Video", { options: { url: b.url }, classes: {}, items: [] });
+    case "modal":
+      return native("Modal", { options: { trigger: b.trigger }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
+    case "marquee": {
+      const track = own(ctx, `${cls}-track`);
+      addStyles(ctx, [
+        { class: cls, breakpoint: "main", props: { overflow: "hidden" }, variables: {} },
+        { class: track, breakpoint: "main", props: { display: "flex", width: "max-content" }, variables: {} }
+      ]);
+      if (child.layout?.gap) addStyles(ctx, layoutStyles(track, { type: "flex", gap: child.layout.gap }, ctx.spec));
+      const direction = b.direction ?? "left";
+      const speed = b.speed ?? 30;
+      ctx.plan.interactions.push({
+        type: "marquee",
+        targetClass: track,
+        direction,
+        speed,
+        note: `loop ${track} horizontally to the ${direction}, one full cycle every ${speed}s, moving ${direction === "left" ? "-50%" : "50%"} (content is duplicated)`
+      });
+      const inner = renderAll(child.children, ctx);
+      return box(`<div class="${track}">${inner}${inner}</div>`);
+    }
+    case "counter":
+      ctx.plan.interactions.push({ type: "counter", targetClass: cls, note: `count the numbers inside ${cls} up from 0 when it scrolls into view` });
+      return box(renderAll(child.children, ctx));
+    case "code":
+      ctx.plan.placeholders.push({ type: "code-component", targetClass: cls, order: nextOrder(ctx, cls), description: b.description ?? `code component for ${cls}` });
+      return box();
+    default:
+      throw new Error(`unsupported behavior "${b.type}"`);
+  }
+}
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
 }
@@ -7761,6 +7839,7 @@ function renderChild(child, ctx) {
     case "group": {
       const cls = `${id}_${child.name}`;
       ctx.custom.add(cls);
+      if (child.behavior) return renderBehavior(child, cls, ctx);
       if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
       return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
     }
@@ -7801,7 +7880,8 @@ function planSection(spec, pageSlug, sectionId) {
     assets: [],
     components: [],
     interactions: [],
-    placeholders: []
+    placeholders: [],
+    natives: []
   };
   const ctx = createContext(spec, section, plan);
   const sectionClass = `section_${section.id}`;
@@ -7887,6 +7967,12 @@ function checkStructure(spec, pageSlug, dump) {
       const plan = planSection(spec, pageSlug, section.id);
       for (const cls of [...plan.classesToCreate, ...plan.utilitiesUsed]) {
         if (!(section.classes ?? []).includes(cls)) add("high", `class "${cls}" from plan not found in Webflow`, section.id);
+      }
+      for (const native of plan.natives) {
+        const built = (section.natives ?? []).filter((n) => n.type === native.type && n.targetClass === native.targetClass)[native.order - 1];
+        const expected = native.items.length;
+        if (!built) add("high", `native ${native.type} inside "${native.targetClass}" not found in Webflow (behavior not built)`, section.id);
+        else if (expected && built.items !== expected) add("high", `native ${native.type} inside "${native.targetClass}": ${expected} items expected, found ${built.items}`, section.id);
       }
     }
     for (const cls of section.classes ?? []) {

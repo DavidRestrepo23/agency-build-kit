@@ -61,9 +61,34 @@ surfaces:
 
 A raster below 2x needs `scaleApproved: "<reason>"` in the manifest (approved by the developer); `/build-core:build-audit` lists every exception in its report.
 
+## Behavior (clickable or moving groups)
+
+A `group` can declare a `behavior`; its `children` are the items. Builders turn it into a native platform element (Webflow: Slider, Tabs, Dropdown, Lightbox, Video, Modal) or an interaction.
+
+| `type` | Children | Fields |
+|---|---|---|
+| `slider` | one per slide | `perView` (responsive number), `arrows`, `dots`, `autoplay`, `interval` (ms), `loop` |
+| `tabs` | one per panel | `labels` (one per child, required) |
+| `accordion` | groups; first child = toggle, rest = content | — |
+| `lightbox` | the thumbnail | `url` (video, required) |
+| `video` | — | `url` (required; YouTube → YouTube element) |
+| `modal` | the modal content | `trigger` (button text, required) |
+| `marquee` | the repeated items | `direction` (left/right), `speed` (s per cycle) |
+| `counter` | the numbers | — |
+| `code` | — | `description` (custom logic → code component) |
+
+```yaml
+- type: group
+  name: testimonials
+  behavior: { type: slider, perView: { desktop: 3, mobile: 1 }, arrows: true, dots: true, autoplay: false }
+  children: [ ... one child per slide ... ]
+```
+
+Only groups take a behavior. Never write one from a guess — `/build-core:build-audit` asks the developer.
+
 ## Child types
 
-`heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph; `**bold**` → `<strong>`, `*italic*` → `<em>`, everything else is escaped) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, children) · `component` (ref, variant?, text?, href?, props? — `text`/`href` are passed to the instance as props) · `form` (description) · `embed-placeholder` (description)
+`heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph; `**bold**` → `<strong>`, `*italic*` → `<em>`, everything else is escaped) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, surface?, behavior?, children) · `component` (ref, variant?, text?, href?, props? — `text`/`href` are passed to the instance as props) · `form` (description) · `embed-placeholder` (description)
 
 Layout: `{ type: grid|flex|stack, columns?, gap?, direction?, align?, justify? }` — `gap` is a spacing token.
 

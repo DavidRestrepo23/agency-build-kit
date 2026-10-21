@@ -25,7 +25,7 @@ discovered:
     spacing: {}
   components: []      # same shape as components.yaml entries
   assets: []          # same shape as assets/manifest.yaml entries
-  interactive:        # candidates from the figma-extract "Interactive candidates" table
+  interactive:        # one entry per section (guess: static when nothing was seen) plus extra entries for groups with signals
     - { section: <id>, group: <name or null>, figmaNode: "<id>", signal: "<what you saw>", guess: "<slider|marquee|...>" }
   autoLayout:         # frames without auto layout (figma-extract step "Auto layout check")
     - { section: <id>, frame: "<frame name>", figmaNode: "<id>", suggest: { direction: vertical|horizontal, gap: <px>, padding: "<t r b l>" } }

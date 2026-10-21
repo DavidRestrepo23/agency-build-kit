@@ -14908,6 +14908,9 @@ var page_schema_default = {
         },
         color: {
           $ref: "common.schema.json#/definitions/tokenName"
+        },
+        behavior: {
+          $ref: "#/definitions/behavior"
         }
       },
       allOf: [
@@ -15129,6 +15132,74 @@ var page_schema_default = {
           }
         }
       ]
+    },
+    behavior: {
+      type: "object",
+      required: [
+        "type"
+      ],
+      additionalProperties: false,
+      properties: {
+        type: {
+          enum: [
+            "slider",
+            "tabs",
+            "accordion",
+            "lightbox",
+            "video",
+            "modal",
+            "marquee",
+            "counter",
+            "code"
+          ]
+        },
+        perView: {
+          $ref: "common.schema.json#/definitions/responsiveNumber"
+        },
+        arrows: {
+          type: "boolean"
+        },
+        dots: {
+          type: "boolean"
+        },
+        autoplay: {
+          type: "boolean"
+        },
+        loop: {
+          type: "boolean"
+        },
+        interval: {
+          type: "number",
+          minimum: 500
+        },
+        labels: {
+          type: "array",
+          items: {
+            type: "string"
+          }
+        },
+        url: {
+          type: "string",
+          pattern: "^https?://"
+        },
+        trigger: {
+          type: "string",
+          minLength: 1
+        },
+        direction: {
+          enum: [
+            "left",
+            "right"
+          ]
+        },
+        speed: {
+          type: "number",
+          exclusiveMinimum: 0
+        },
+        description: {
+          type: "string"
+        }
+      }
     }
   }
 };
@@ -15276,6 +15347,26 @@ function crossReferenceErrors(spec) {
   const checkLayout = (file, layout, path) => {
     if (layout?.gap && !spacing.has(layout.gap)) err(file, `${path}/gap`, `unknown spacing token "${layout.gap}"`);
   };
+  const checkBehavior = (file, child, path) => {
+    const behavior = child.behavior;
+    const children = child.children ?? [];
+    if (child.type !== "group") return err(file, path, `only groups can have a behavior, found it on a ${child.type}`);
+    if (["slider", "tabs", "accordion"].includes(behavior.type) && children.length === 0) {
+      err(file, path, `${behavior.type} needs at least one child (one per slide / tab / item)`);
+    }
+    if (behavior.type === "tabs" && (behavior.labels ?? []).length !== children.length) {
+      err(file, `${path}/labels`, `tabs need one label per child: ${children.length} children, ${(behavior.labels ?? []).length} labels`);
+    }
+    if (behavior.type === "accordion") {
+      children.forEach((item, i) => {
+        if (item.type !== "group" || (item.children ?? []).length < 2) {
+          err(file, `${path.replace(/\/behavior$/, "")}/children/${i}`, "accordion item must be a group whose first child is the toggle and the rest the content");
+        }
+      });
+    }
+    if (["video", "lightbox"].includes(behavior.type) && !behavior.url) err(file, `${path}/url`, `${behavior.type} needs the video url`);
+    if (behavior.type === "modal" && !behavior.trigger) err(file, `${path}/trigger`, "modal needs the trigger button text");
+  };
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
@@ -15287,6 +15378,7 @@ function crossReferenceErrors(spec) {
     }
     if (child.type === "component") checkVariant(file, path, child.ref, child.variant);
     if (child.type === "button") checkVariant(file, path, "button", child.variant);
+    if (child.behavior) checkBehavior(file, child, `${path}/behavior`);
     if (child.type === "group") {
       checkSurface(file, path, child.surface);
       if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);

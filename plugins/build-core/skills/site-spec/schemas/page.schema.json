@@ -217,6 +217,9 @@
         },
         "color": {
           "$ref": "common.schema.json#/definitions/tokenName"
+        },
+        "behavior": {
+          "$ref": "#/definitions/behavior"
         }
       },
       "allOf": [
@@ -438,6 +441,74 @@
           }
         }
       ]
+    },
+    "behavior": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "slider",
+            "tabs",
+            "accordion",
+            "lightbox",
+            "video",
+            "modal",
+            "marquee",
+            "counter",
+            "code"
+          ]
+        },
+        "perView": {
+          "$ref": "common.schema.json#/definitions/responsiveNumber"
+        },
+        "arrows": {
+          "type": "boolean"
+        },
+        "dots": {
+          "type": "boolean"
+        },
+        "autoplay": {
+          "type": "boolean"
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "interval": {
+          "type": "number",
+          "minimum": 500
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "enum": [
+            "left",
+            "right"
+          ]
+        },
+        "speed": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "description": {
+          "type": "string"
+        }
+      }
     }
   }
 }

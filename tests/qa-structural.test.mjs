@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { loadSpec } from '../src/lib/load-spec.mjs';
 import { checkStructure } from '../src/lib/qa-structural.mjs';
 import { planSection } from '../src/lib/plan-section.mjs';
-import { VALID_SPEC } from './helpers.mjs';
+import { VALID_SPEC, copyFixture, editYaml } from './helpers.mjs';
 
 const spec = loadSpec(VALID_SPEC);
 
@@ -111,4 +111,24 @@ test('report: an empty combo class is high severity', () => {
   dump.styles.push({ name: 'button is-secondary', breakpoint: 'main', isComboClass: true, props: {}, variables: { color: 'brand-primary' } });
   const findings = checkStructure(spec, 'home', dump).findings;
   assert.deepEqual(findings.filter((f) => /empty combo/.test(f.message)).map((f) => [f.severity, f.section]), [['high', 'features']]);
+});
+
+test('behavior: missing native element or wrong item count is high severity', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[1].children.push({ type: 'group', name: 'carousel', behavior: { type: 'slider' }, children: [
+      { type: 'text', style: 'text.regular', text: 'One' },
+      { type: 'text', style: 'text.regular', text: 'Two' },
+    ] });
+  });
+  const s = loadSpec(dir);
+  const plan = planSection(s, 'home', 'features');
+  const dump = goodDump();
+  dump.sections[1].classes = [...plan.classesToCreate, ...plan.utilitiesUsed];
+  const findings = (d) => checkStructure(s, 'home', d).findings.filter((f) => /Slider/.test(f.message));
+  assert.deepEqual(findings(dump).map((f) => [f.severity, f.section]), [['high', 'features']]);
+  dump.sections[1].natives = [{ type: 'Slider', targetClass: 'features_carousel', items: 1 }];
+  assert.match(findings(dump)[0].message, /2 items expected, found 1/);
+  dump.sections[1].natives[0].items = 2;
+  assert.deepEqual(findings(dump), []);
 });

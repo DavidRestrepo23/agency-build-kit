@@ -236,3 +236,50 @@ test('report: textTransform must be a CSS text-transform keyword', () => {
   editYaml(dir, 'tokens.yaml', (t) => { t.typography[0].textTransform = 'shout'; });
   assert.ok(errorsFor(dir).some((e) => e.file === 'tokens.yaml' && e.path === '/typography/0/textTransform'), JSON.stringify(errorsFor(dir)));
 });
+
+const slides = [
+  { type: 'text', style: 'text.regular', text: 'Slide one' },
+  { type: 'text', style: 'text.regular', text: 'Slide two' },
+];
+function withBehavior(behavior, children = slides) {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[1].children.push({ type: 'group', name: 'carousel', behavior, children });
+  });
+  return dir;
+}
+
+test('behavior: slider group is valid', () => {
+  assert.deepEqual(errorsFor(withBehavior({ type: 'slider', perView: { desktop: 3, mobile: 1 }, arrows: true, dots: true, autoplay: false })), []);
+});
+
+test('behavior: unknown type is rejected by the schema', () => {
+  assert.ok(errorsFor(withBehavior({ type: 'parallax' })).some((e) => /behavior\/type/.test(e.path)));
+});
+
+test('behavior: tabs need one label per child', () => {
+  const errors = errorsFor(withBehavior({ type: 'tabs', labels: ['Only one'] }));
+  assert.ok(errors.some((e) => e.path.endsWith('/behavior/labels') && /2 children/.test(e.message)), JSON.stringify(errors));
+});
+
+test('behavior: video and lightbox need a url, modal needs a trigger', () => {
+  assert.ok(errorsFor(withBehavior({ type: 'video' })).some((e) => e.path.endsWith('/behavior/url')));
+  assert.ok(errorsFor(withBehavior({ type: 'modal' })).some((e) => e.path.endsWith('/behavior/trigger')));
+  assert.deepEqual(errorsFor(withBehavior({ type: 'lightbox', url: 'https://youtu.be/x' })), []);
+});
+
+test('behavior: accordion items must be groups', () => {
+  const errors = errorsFor(withBehavior({ type: 'accordion' }));
+  assert.ok(errors.some((e) => /accordion item must be a group/.test(e.message)), JSON.stringify(errors));
+  const items = [{ type: 'group', name: 'faq-1', children: [
+    { type: 'heading', level: 3, style: 'heading.h2', text: 'Q?' },
+    { type: 'text', style: 'text.regular', text: 'A.' },
+  ] }];
+  assert.deepEqual(errorsFor(withBehavior({ type: 'accordion' }, items)), []);
+});
+
+test('behavior: only groups can have a behavior', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[0].behavior = { type: 'slider' }; });
+  assert.ok(errorsFor(dir).some((e) => /behavior/.test(e.path)));
+});

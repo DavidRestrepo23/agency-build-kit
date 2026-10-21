@@ -69,7 +69,7 @@ Figma frames are static; behavior must come from the developer. Flag a section o
 | Prototype interactions on the frame (if the MCP exposes them) | the prototyped behavior |
 | Diagram or calculator with logic (rings, steps, sliders with values) | code component |
 
-For each candidate keep: section id (and group name), Figma node id, the signal, and your best guess. Do not write `needsCodeComponent` or `notes.interaction` from a guess — wait for the developer's answer in `/build-core:build-audit`.
+Report **every section**, with guess `static` when you saw no signal — the dispatcher asks the developer about all of them, because many sliders and tabs show no signal in a static frame. For each candidate keep: section id (and group name), Figma node id, the signal, and your best guess. Do not write `behavior`, `needsCodeComponent` or `notes.interaction` from a guess — wait for the developer's answer in `/build-core:build-audit`.
 
 ## Never
 

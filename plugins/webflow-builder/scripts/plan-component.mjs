@@ -14908,6 +14908,9 @@ var page_schema_default = {
         },
         color: {
           $ref: "common.schema.json#/definitions/tokenName"
+        },
+        behavior: {
+          $ref: "#/definitions/behavior"
         }
       },
       allOf: [
@@ -15129,6 +15132,74 @@ var page_schema_default = {
           }
         }
       ]
+    },
+    behavior: {
+      type: "object",
+      required: [
+        "type"
+      ],
+      additionalProperties: false,
+      properties: {
+        type: {
+          enum: [
+            "slider",
+            "tabs",
+            "accordion",
+            "lightbox",
+            "video",
+            "modal",
+            "marquee",
+            "counter",
+            "code"
+          ]
+        },
+        perView: {
+          $ref: "common.schema.json#/definitions/responsiveNumber"
+        },
+        arrows: {
+          type: "boolean"
+        },
+        dots: {
+          type: "boolean"
+        },
+        autoplay: {
+          type: "boolean"
+        },
+        loop: {
+          type: "boolean"
+        },
+        interval: {
+          type: "number",
+          minimum: 500
+        },
+        labels: {
+          type: "array",
+          items: {
+            type: "string"
+          }
+        },
+        url: {
+          type: "string",
+          pattern: "^https?://"
+        },
+        trigger: {
+          type: "string",
+          minLength: 1
+        },
+        direction: {
+          enum: [
+            "left",
+            "right"
+          ]
+        },
+        speed: {
+          type: "number",
+          exclusiveMinimum: 0
+        },
+        description: {
+          type: "string"
+        }
+      }
     }
   }
 };
@@ -15276,6 +15347,26 @@ function crossReferenceErrors(spec) {
   const checkLayout = (file, layout, path) => {
     if (layout?.gap && !spacing.has(layout.gap)) err(file, `${path}/gap`, `unknown spacing token "${layout.gap}"`);
   };
+  const checkBehavior = (file, child, path) => {
+    const behavior = child.behavior;
+    const children = child.children ?? [];
+    if (child.type !== "group") return err(file, path, `only groups can have a behavior, found it on a ${child.type}`);
+    if (["slider", "tabs", "accordion"].includes(behavior.type) && children.length === 0) {
+      err(file, path, `${behavior.type} needs at least one child (one per slide / tab / item)`);
+    }
+    if (behavior.type === "tabs" && (behavior.labels ?? []).length !== children.length) {
+      err(file, `${path}/labels`, `tabs need one label per child: ${children.length} children, ${(behavior.labels ?? []).length} labels`);
+    }
+    if (behavior.type === "accordion") {
+      children.forEach((item, i) => {
+        if (item.type !== "group" || (item.children ?? []).length < 2) {
+          err(file, `${path.replace(/\/behavior$/, "")}/children/${i}`, "accordion item must be a group whose first child is the toggle and the rest the content");
+        }
+      });
+    }
+    if (["video", "lightbox"].includes(behavior.type) && !behavior.url) err(file, `${path}/url`, `${behavior.type} needs the video url`);
+    if (behavior.type === "modal" && !behavior.trigger) err(file, `${path}/trigger`, "modal needs the trigger button text");
+  };
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
@@ -15287,6 +15378,7 @@ function crossReferenceErrors(spec) {
     }
     if (child.type === "component") checkVariant(file, path, child.ref, child.variant);
     if (child.type === "button") checkVariant(file, path, "button", child.variant);
+    if (child.behavior) checkBehavior(file, child, `${path}/behavior`);
     if (child.type === "group") {
       checkSurface(file, path, child.surface);
       if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);
@@ -15556,6 +15648,84 @@ function withSurface(cls, surface, ctx) {
 function richTextHtml(text) {
   return escapeHtml(text).replace(/\*\*(\S(?:.*?\S)?)\*\*/g, "<strong>$1</strong>").replace(/\*(\S(?:.*?\S)?)\*/g, "<em>$1</em>");
 }
+var renderAll = (children, ctx) => (children ?? []).map((c) => renderChild(c, ctx)).join("");
+function own(ctx, cls) {
+  ctx.custom.add(cls);
+  return cls;
+}
+function renderBehavior(child, cls, ctx) {
+  const b = child.behavior;
+  const box = (inner = "") => `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${inner}</div>`;
+  const native = (type, extra) => {
+    ctx.plan.natives.push({ type, targetClass: cls, order: nextOrder(ctx, cls), ...extra });
+    return box();
+  };
+  const pick = (keys) => Object.fromEntries(keys.filter((k) => b[k] !== void 0).map((k) => [k, b[k]]));
+  switch (b.type) {
+    case "slider": {
+      const slide = own(ctx, `${cls}-slide`);
+      const widths = changedBreakpoints(resolveResponsive(b.perView ?? 1)).map(([bp, n]) => ({ class: slide, breakpoint: bp, props: { width: `${Number((100 / n).toFixed(4))}%` }, variables: {} }));
+      addStyles(ctx, widths);
+      if (child.layout) addStyles(ctx, layoutStyles(slide, child.layout, ctx.spec));
+      return native("Slider", {
+        options: pick(["arrows", "dots", "autoplay", "interval", "loop"]),
+        classes: { slide },
+        items: child.children.map((c) => ({ whtml: renderChild(c, ctx) }))
+      });
+    }
+    case "tabs":
+      return native("Tabs", {
+        options: {},
+        classes: { menu: own(ctx, `${cls}-menu`), tab: own(ctx, `${cls}-tab`), pane: own(ctx, `${cls}-pane`) },
+        items: child.children.map((c, i) => ({ label: b.labels[i], whtml: renderChild(c, ctx) }))
+      });
+    case "accordion": {
+      const content = own(ctx, `${cls}-content`);
+      addStyles(ctx, [{ class: content, breakpoint: "main", props: { position: "static", display: "block" }, variables: {} }]);
+      return native("Dropdown", {
+        options: { mode: "accordion" },
+        classes: { item: own(ctx, `${cls}-item`), toggle: own(ctx, `${cls}-toggle`), content },
+        items: child.children.map((item) => ({
+          toggle: renderChild(item.children[0], ctx),
+          content: renderAll(item.children.slice(1), ctx)
+        }))
+      });
+    }
+    case "lightbox":
+      return native("Lightbox", { options: { url: b.url }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
+    case "video":
+      return native(/youtube\.com|youtu\.be/.test(b.url) ? "YouTubeVideo" : "Video", { options: { url: b.url }, classes: {}, items: [] });
+    case "modal":
+      return native("Modal", { options: { trigger: b.trigger }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
+    case "marquee": {
+      const track = own(ctx, `${cls}-track`);
+      addStyles(ctx, [
+        { class: cls, breakpoint: "main", props: { overflow: "hidden" }, variables: {} },
+        { class: track, breakpoint: "main", props: { display: "flex", width: "max-content" }, variables: {} }
+      ]);
+      if (child.layout?.gap) addStyles(ctx, layoutStyles(track, { type: "flex", gap: child.layout.gap }, ctx.spec));
+      const direction = b.direction ?? "left";
+      const speed = b.speed ?? 30;
+      ctx.plan.interactions.push({
+        type: "marquee",
+        targetClass: track,
+        direction,
+        speed,
+        note: `loop ${track} horizontally to the ${direction}, one full cycle every ${speed}s, moving ${direction === "left" ? "-50%" : "50%"} (content is duplicated)`
+      });
+      const inner = renderAll(child.children, ctx);
+      return box(`<div class="${track}">${inner}${inner}</div>`);
+    }
+    case "counter":
+      ctx.plan.interactions.push({ type: "counter", targetClass: cls, note: `count the numbers inside ${cls} up from 0 when it scrolls into view` });
+      return box(renderAll(child.children, ctx));
+    case "code":
+      ctx.plan.placeholders.push({ type: "code-component", targetClass: cls, order: nextOrder(ctx, cls), description: b.description ?? `code component for ${cls}` });
+      return box();
+    default:
+      throw new Error(`unsupported behavior "${b.type}"`);
+  }
+}
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
 }
@@ -15610,6 +15780,7 @@ function renderChild(child, ctx) {
     case "group": {
       const cls = `${id}_${child.name}`;
       ctx.custom.add(cls);
+      if (child.behavior) return renderBehavior(child, cls, ctx);
       if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
       return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
     }
@@ -15680,7 +15851,8 @@ function planComponent(spec, name) {
     assets: [],
     components: [],
     interactions: [],
-    placeholders: []
+    placeholders: [],
+    natives: []
   };
   const ctx = createContext(spec, { id: name }, plan);
   const root = `${name}_component`;

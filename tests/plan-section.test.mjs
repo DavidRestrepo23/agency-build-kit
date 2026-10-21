@@ -229,3 +229,85 @@ test('report: grid columns with mobileLandscape emit small and tiny styles', () 
   assert.equal(grid.find((s) => s.breakpoint === 'tiny').props['grid-template-columns'], 'repeat(1, minmax(0, 1fr))');
   assert.equal(grid.find((s) => s.breakpoint === 'small')?.props['grid-template-columns'], undefined);
 });
+
+function planWith(behavior, children) {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[1].children.push({ type: 'group', name: 'carousel', behavior, children: children ?? [
+      { type: 'text', style: 'text.regular', text: 'One' },
+      { type: 'text', style: 'text.regular', text: 'Two' },
+      { type: 'text', style: 'text.regular', text: 'Three' },
+    ] });
+  });
+  return planSection(loadSpec(dir), 'home', 'features');
+}
+
+test('behavior slider: native Slider entry with one item per child and per-view slide widths', () => {
+  const plan = planWith({ type: 'slider', perView: { desktop: 3, mobile: 1 }, arrows: true, dots: false, autoplay: true, interval: 4000 });
+  assert.ok(plan.whtml.includes('<div class="features_carousel"></div>'), plan.whtml);
+  assert.equal(plan.natives.length, 1);
+  const native = plan.natives[0];
+  assert.equal(native.type, 'Slider');
+  assert.equal(native.targetClass, 'features_carousel');
+  assert.deepEqual(native.options, { arrows: true, dots: false, autoplay: true, interval: 4000 });
+  assert.deepEqual(native.classes, { slide: 'features_carousel-slide' });
+  assert.deepEqual(native.items.map((i) => i.whtml), ['<p class="text-size-regular">One</p>', '<p class="text-size-regular">Two</p>', '<p class="text-size-regular">Three</p>']);
+  const slide = plan.styles.filter((s) => s.class === 'features_carousel-slide');
+  assert.equal(slide.find((s) => s.breakpoint === 'main').props.width, '33.3333%');
+  assert.equal(slide.find((s) => s.breakpoint === 'small').props.width, '100%');
+  assert.ok(plan.classesToCreate.includes('features_carousel-slide'));
+});
+
+test('behavior tabs: labels and panes', () => {
+  const plan = planWith({ type: 'tabs', labels: ['A', 'B', 'C'] });
+  const native = plan.natives[0];
+  assert.equal(native.type, 'Tabs');
+  assert.deepEqual(native.items.map((i) => i.label), ['A', 'B', 'C']);
+  assert.deepEqual(native.classes, { menu: 'features_carousel-menu', tab: 'features_carousel-tab', pane: 'features_carousel-pane' });
+});
+
+test('behavior accordion: one Dropdown per item, first child is the toggle, content flows in the page', () => {
+  const items = [1, 2].map((n) => ({ type: 'group', name: `faq-${n}`, children: [
+    { type: 'heading', level: 3, style: 'heading.h2', text: `Q${n}` },
+    { type: 'text', style: 'text.regular', text: `A${n}` },
+  ] }));
+  const plan = planWith({ type: 'accordion' }, items);
+  const native = plan.natives[0];
+  assert.equal(native.type, 'Dropdown');
+  assert.deepEqual(native.items.map((i) => [i.toggle, i.content]), [
+    ['<h3 class="heading-style-h2">Q1</h3>', '<p class="text-size-regular">A1</p>'],
+    ['<h3 class="heading-style-h2">Q2</h3>', '<p class="text-size-regular">A2</p>'],
+  ]);
+  assert.equal(plan.styles.find((s) => s.class === 'features_carousel-content').props.position, 'static');
+});
+
+test('behavior video, lightbox and modal', () => {
+  assert.deepEqual(planWith({ type: 'video', url: 'https://www.youtube.com/watch?v=abc' }).natives[0].type, 'YouTubeVideo');
+  assert.deepEqual(planWith({ type: 'video', url: 'https://cdn.example.com/a.mp4' }).natives[0].type, 'Video');
+  const lightbox = planWith({ type: 'lightbox', url: 'https://youtu.be/abc' }).natives[0];
+  assert.equal(lightbox.type, 'Lightbox');
+  assert.equal(lightbox.options.url, 'https://youtu.be/abc');
+  assert.equal(lightbox.items.length, 1);
+  const modal = planWith({ type: 'modal', trigger: 'Ver más' }).natives[0];
+  assert.equal(modal.type, 'Modal');
+  assert.equal(modal.options.trigger, 'Ver más');
+});
+
+test('behavior marquee: duplicated track and an interaction', () => {
+  const plan = planWith({ type: 'marquee', direction: 'left', speed: 20 });
+  assert.ok(plan.whtml.includes('<div class="features_carousel"><div class="features_carousel-track">'), plan.whtml);
+  assert.equal((plan.whtml.match(/>One</g) ?? []).length, 2, 'content duplicated for a seamless loop');
+  assert.deepEqual(plan.interactions.find((i) => i.type === 'marquee'), {
+    type: 'marquee', targetClass: 'features_carousel-track', direction: 'left', speed: 20,
+    note: 'loop features_carousel-track horizontally to the left, one full cycle every 20s, moving -50% (content is duplicated)',
+  });
+  assert.equal(plan.natives.length, 0);
+});
+
+test('behavior counter and code', () => {
+  const counter = planWith({ type: 'counter' });
+  assert.equal(counter.interactions.find((i) => i.type === 'counter').targetClass, 'features_carousel');
+  const code = planWith({ type: 'code', description: 'ROI calculator' });
+  assert.ok(code.placeholders.some((p) => p.type === 'code-component' && p.targetClass === 'features_carousel' && p.description === 'ROI calculator'));
+  assert.ok(code.whtml.includes('<div class="features_carousel"></div>'));
+});
