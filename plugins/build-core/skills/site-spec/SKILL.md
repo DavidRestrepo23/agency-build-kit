@@ -88,7 +88,9 @@ Only groups take a behavior. Never write one from a guess — `/build-core:build
 
 ## Child types
 
-`heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph; `**bold**` → `<strong>`, `*italic*` → `<em>`, everything else is escaped) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, surface?, behavior?, children) · `component` (ref, variant?, text?, href?, props? — `text`/`href` are passed to the instance as props) · `form` (description) · `embed-placeholder` (description)
+`heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph; `**bold**` → `<strong>`, `*italic*` → `<em>`, everything else is escaped) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, surface?, behavior?, children)
+
+Any child can be `decorative: true` with `position: { top?, right?, bottom?, left?, width?, height? }` (px, from the container edges) and optional `keepOnMobile: true`: glows, stickers, floating icons and collage pieces that overlap the content. Builders place them absolutely in their own wrapper (parent becomes `position: relative`) and hide them from mobile landscape down unless `keepOnMobile`. · `component` (ref, variant?, text?, href?, props? — `text`/`href` are passed to the instance as props) · `form` (description) · `embed-placeholder` (description)
 
 Layout: `{ type: grid|flex|stack, columns?, gap?, direction?, align?, justify? }` — `gap` is a spacing token.
 

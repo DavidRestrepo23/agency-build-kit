@@ -37,6 +37,7 @@ Utilities: `page-wrapper`, `main-wrapper`, `padding-global`, `container-*`, `pad
 | `color` on heading/text | own class `<id>_<style>-<color>` with typography + color (e.g. `hero_text-large-neutral-black`); without color, the utility alone |
 | `layout.textAlign` | `text-align` written on the element's own class |
 | section | `<section id="<id>">` for anchor links |
+| child `decorative: true` | wrapped in `<id>_decor` / `<id>_decor-2`… (`position: absolute`, offsets in rem, `aria-hidden`), parent gets `position: relative` |
 | token `brand.primary` | Webflow variable `brand-primary` |
 
 All of this is computed by `plan-section.mjs`; do not hand-roll class names.

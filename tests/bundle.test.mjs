@@ -1,7 +1,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { copyFileSync, mkdtempSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,15 @@ function runIsolated(plugin, script, args) {
 before(() => {
   const build = spawnSync(process.execPath, ['scripts/build.mjs'], { cwd: ROOT, encoding: 'utf8' });
   assert.equal(build.status, 0, build.stderr);
+});
+
+test('build-core infer-layout runs without node_modules', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'meta-'));
+  const xml = join(dir, 'meta.xml');
+  writeFileSync(xml, '<frame id="1:1" name="Col" x="0" y="0" width="100" height="100"><text id="1:2" name="a" x="0" y="0" width="100" height="34" /><text id="1:3" name="b" x="0" y="66" width="100" height="34" /></frame>');
+  const run = runIsolated('build-core', 'infer-layout.mjs', [xml, '--spec', VALID_SPEC]);
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(JSON.parse(run.stdout).frames[0].layout.gap, 'space.lg');
 });
 
 test('build-core validate-spec runs without node_modules', () => {

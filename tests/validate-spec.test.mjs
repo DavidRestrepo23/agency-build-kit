@@ -283,3 +283,11 @@ test('behavior: only groups can have a behavior', () => {
   editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].children[0].behavior = { type: 'slider' }; });
   assert.ok(errorsFor(dir).some((e) => /behavior/.test(e.path)));
 });
+
+test('decorative: position and keepOnMobile need decorative: true', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].children[3].position = { top: 0 }; });
+  assert.ok(errorsFor(dir).some((e) => e.path === '/sections/0/children/3/position' && /decorative: true/.test(e.message)), JSON.stringify(errorsFor(dir)));
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].children[3].decorative = true; });
+  assert.deepEqual(errorsFor(dir), []);
+});

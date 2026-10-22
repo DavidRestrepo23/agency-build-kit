@@ -1,4 +1,4 @@
-import { createContext, layoutStyles, renderChild, withSurface, withTextAlign } from './plan-section.mjs';
+import { createContext, layoutStyles, relativeIfDecorated, renderChild, withSurface, withTextAlign } from './plan-section.mjs';
 
 const COLLAPSE_BREAKPOINT = { tablet: 'medium', 'mobile-landscape': 'small' };
 
@@ -55,6 +55,7 @@ export function planComponent(spec, name) {
   const root = `${name}_component`;
   ctx.custom.add(root);
   if (component.layout) plan.styles.push(...layoutStyles(root, component.layout, spec));
+  relativeIfDecorated(root, component.children, ctx);
 
   let inner = (component.children ?? []).map((child) => renderChild(child, ctx)).join('');
   if (!component.children?.length) {

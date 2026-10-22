@@ -131,6 +131,10 @@ function crossReferenceErrors(spec) {
     if (child.type === 'component') checkVariant(file, path, child.ref, child.variant);
     if (child.type === 'button') checkVariant(file, path, 'button', child.variant);
     if (child.behavior) checkBehavior(file, child, `${path}/behavior`);
+    if (!child.decorative) {
+      if (child.position) err(file, `${path}/position`, 'position is only for decorative: true children');
+      if (child.keepOnMobile !== undefined) err(file, `${path}/keepOnMobile`, 'keepOnMobile is only for decorative: true children');
+    }
     if (child.type === 'group') {
       checkSurface(file, path, child.surface);
       if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);

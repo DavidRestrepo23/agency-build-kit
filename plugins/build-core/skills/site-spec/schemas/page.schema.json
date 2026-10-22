@@ -220,6 +220,37 @@
         },
         "behavior": {
           "$ref": "#/definitions/behavior"
+        },
+        "decorative": {
+          "type": "boolean"
+        },
+        "keepOnMobile": {
+          "type": "boolean"
+        },
+        "position": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "top": {
+              "type": "number"
+            },
+            "right": {
+              "type": "number"
+            },
+            "bottom": {
+              "type": "number"
+            },
+            "left": {
+              "type": "number"
+            },
+            "width": {
+              "type": "number"
+            },
+            "height": {
+              "type": "number"
+            }
+          }
         }
       },
       "allOf": [

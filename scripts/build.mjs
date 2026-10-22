@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 
 const TARGETS = [
   ['src/cli/validate-spec.mjs', ['plugins/build-core/scripts/validate-spec.mjs', 'plugins/webflow-builder/scripts/validate-spec.mjs']],
+  ['src/cli/infer-layout.mjs', ['plugins/build-core/scripts/infer-layout.mjs']],
   ['src/cli/validate-class-names.mjs', ['plugins/webflow-builder/scripts/validate-class-names.mjs']],
   ['src/cli/plan-setup.mjs', ['plugins/webflow-builder/scripts/plan-setup.mjs']],
   ['src/cli/plan-section.mjs', ['plugins/webflow-builder/scripts/plan-section.mjs']],

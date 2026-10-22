@@ -311,3 +311,37 @@ test('behavior counter and code', () => {
   assert.ok(code.placeholders.some((p) => p.type === 'code-component' && p.targetClass === 'features_carousel' && p.description === 'ROI calculator'));
   assert.ok(code.whtml.includes('<div class="features_carousel"></div>'));
 });
+
+test('decorative children are absolutely positioned in their own wrapper and hidden on mobile', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[0].children.push({ type: 'image', asset: 'hero-mockup', alt: '', decorative: true, position: { top: -40, left: 960, width: 566 } });
+    p.sections[1].children[1].children.push({ type: 'svg', asset: 'logo', decorative: true, keepOnMobile: true, position: { bottom: 0, right: 24 } });
+  });
+  const s = loadSpec(dir);
+  const hero = planSection(s, 'home', 'hero');
+  assert.ok(hero.whtml.includes('<div class="hero_decor" aria-hidden="true"><div class="hero_image-wrapper'), hero.whtml);
+  const decor = hero.styles.filter((x) => x.class === 'hero_decor');
+  assert.deepEqual(decor.find((x) => x.breakpoint === 'main').props, {
+    position: 'absolute', 'pointer-events': 'none', 'z-index': '0', top: '-2.5rem', left: '60rem', width: '35.375rem',
+  });
+  assert.deepEqual(decor.find((x) => x.breakpoint === 'small').props, { display: 'none' });
+  assert.equal(hero.styles.find((x) => x.class === 'hero_component' && x.breakpoint === 'main').props.position, 'relative');
+
+  const features = planSection(s, 'home', 'features');
+  assert.ok(features.whtml.includes('<div class="features_decor" aria-hidden="true">'));
+  assert.equal(features.styles.find((x) => x.class === 'features_decor' && x.breakpoint === 'small'), undefined, 'keepOnMobile');
+  assert.equal(features.styles.find((x) => x.class === 'features_grid' && x.breakpoint === 'main').props.position, 'relative');
+});
+
+test('several decorative children get numbered wrappers', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[0].children.push({ type: 'svg', asset: 'logo', decorative: true, position: { top: 0, left: 0 } });
+    p.sections[0].children.push({ type: 'svg', asset: 'logo', decorative: true, position: { top: 10, left: 10 } });
+  });
+  const hero = planSection(loadSpec(dir), 'home', 'hero');
+  assert.ok(hero.classesToCreate.includes('hero_decor'));
+  assert.ok(hero.classesToCreate.includes('hero_decor-2'));
+  assert.equal(hero.styles.find((x) => x.class === 'hero_decor-2' && x.breakpoint === 'main').props.top, '0.625rem');
+});

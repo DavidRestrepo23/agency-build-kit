@@ -7788,7 +7788,23 @@ function renderBehavior(child, cls, ctx) {
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
 }
+function renderDecorative(child, ctx) {
+  const n = ctx.decorCount = (ctx.decorCount ?? 0) + 1;
+  const cls = own(ctx, `${ctx.section.id}_decor${n === 1 ? "" : `-${n}`}`);
+  const props = { position: "absolute", "pointer-events": "none", "z-index": "0" };
+  for (const [key, px] of Object.entries(child.position ?? {})) props[key] = pxToRem(px);
+  const styles = [{ class: cls, breakpoint: "main", props, variables: {} }];
+  if (!child.keepOnMobile) styles.push({ class: cls, breakpoint: "small", props: { display: "none" }, variables: {} });
+  addStyles(ctx, styles);
+  const { decorative, position, keepOnMobile, ...inner } = child;
+  return `<div class="${cls}" aria-hidden="true">${renderChild(inner, ctx)}</div>`;
+}
+function relativeIfDecorated(cls, children, ctx) {
+  if ((children ?? []).some((c) => c.decorative)) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { position: "relative" }, variables: {} }]);
+  return cls;
+}
 function renderChild(child, ctx) {
+  if (child.decorative) return renderDecorative(child, ctx);
   const id = ctx.section.id;
   switch (child.type) {
     case "heading": {
@@ -7841,6 +7857,7 @@ function renderChild(child, ctx) {
       ctx.custom.add(cls);
       if (child.behavior) return renderBehavior(child, cls, ctx);
       if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
+      relativeIfDecorated(cls, child.children, ctx);
       return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
     }
     case "component": {
@@ -7893,6 +7910,7 @@ function planSection(spec, pageSlug, sectionId) {
     addStyles(ctx, [{ class: sectionClass, breakpoint: "main", props: {}, variables: { "background-color": variableName(section.background) } }]);
   }
   if (section.layout) addStyles(ctx, layoutStyles(componentClass, section.layout, spec));
+  relativeIfDecorated(componentClass, section.children, ctx);
   let inner = section.children.map((child) => renderChild(child, ctx)).join("");
   if (section.needsCodeComponent) {
     const slot = `${section.id}_code-component-slot`;

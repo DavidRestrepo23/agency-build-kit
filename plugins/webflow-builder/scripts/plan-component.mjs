@@ -14911,6 +14911,37 @@ var page_schema_default = {
         },
         behavior: {
           $ref: "#/definitions/behavior"
+        },
+        decorative: {
+          type: "boolean"
+        },
+        keepOnMobile: {
+          type: "boolean"
+        },
+        position: {
+          type: "object",
+          additionalProperties: false,
+          minProperties: 1,
+          properties: {
+            top: {
+              type: "number"
+            },
+            right: {
+              type: "number"
+            },
+            bottom: {
+              type: "number"
+            },
+            left: {
+              type: "number"
+            },
+            width: {
+              type: "number"
+            },
+            height: {
+              type: "number"
+            }
+          }
         }
       },
       allOf: [
@@ -15379,6 +15410,10 @@ function crossReferenceErrors(spec) {
     if (child.type === "component") checkVariant(file, path, child.ref, child.variant);
     if (child.type === "button") checkVariant(file, path, "button", child.variant);
     if (child.behavior) checkBehavior(file, child, `${path}/behavior`);
+    if (!child.decorative) {
+      if (child.position) err(file, `${path}/position`, "position is only for decorative: true children");
+      if (child.keepOnMobile !== void 0) err(file, `${path}/keepOnMobile`, "keepOnMobile is only for decorative: true children");
+    }
     if (child.type === "group") {
       checkSurface(file, path, child.surface);
       if (RESERVED_GROUP.test(child.name)) err(file, `${path}/name`, `group name "${child.name}" is reserved (collides with generated class names)`);
@@ -15729,7 +15764,23 @@ function renderBehavior(child, cls, ctx) {
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
 }
+function renderDecorative(child, ctx) {
+  const n = ctx.decorCount = (ctx.decorCount ?? 0) + 1;
+  const cls = own(ctx, `${ctx.section.id}_decor${n === 1 ? "" : `-${n}`}`);
+  const props = { position: "absolute", "pointer-events": "none", "z-index": "0" };
+  for (const [key, px] of Object.entries(child.position ?? {})) props[key] = pxToRem(px);
+  const styles = [{ class: cls, breakpoint: "main", props, variables: {} }];
+  if (!child.keepOnMobile) styles.push({ class: cls, breakpoint: "small", props: { display: "none" }, variables: {} });
+  addStyles(ctx, styles);
+  const { decorative, position, keepOnMobile, ...inner } = child;
+  return `<div class="${cls}" aria-hidden="true">${renderChild(inner, ctx)}</div>`;
+}
+function relativeIfDecorated(cls, children, ctx) {
+  if ((children ?? []).some((c) => c.decorative)) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { position: "relative" }, variables: {} }]);
+  return cls;
+}
 function renderChild(child, ctx) {
+  if (child.decorative) return renderDecorative(child, ctx);
   const id = ctx.section.id;
   switch (child.type) {
     case "heading": {
@@ -15782,6 +15833,7 @@ function renderChild(child, ctx) {
       ctx.custom.add(cls);
       if (child.behavior) return renderBehavior(child, cls, ctx);
       if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
+      relativeIfDecorated(cls, child.children, ctx);
       return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
     }
     case "component": {
@@ -15858,6 +15910,7 @@ function planComponent(spec, name) {
   const root = `${name}_component`;
   ctx.custom.add(root);
   if (component.layout) plan.styles.push(...layoutStyles(root, component.layout, spec));
+  relativeIfDecorated(root, component.children, ctx);
   let inner = (component.children ?? []).map((child) => renderChild(child, ctx)).join("");
   if (!component.children?.length) {
     const slot = `${name}_component-slot`;

@@ -27,8 +27,8 @@ discovered:
   assets: []          # same shape as assets/manifest.yaml entries
   interactive:        # one entry per section (guess: static when nothing was seen) plus extra entries for groups with signals
     - { section: <id>, group: <name or null>, figmaNode: "<id>", signal: "<what you saw>", guess: "<slider|marquee|...>" }
-  autoLayout:         # frames without auto layout (figma-extract step "Auto layout check")
-    - { section: <id>, frame: "<frame name>", figmaNode: "<id>", suggest: { direction: vertical|horizontal, gap: <px>, padding: "<t r b l>" } }
+  inferredLayouts:    # frames without auto layout, from infer-layout.mjs (figma-extract step 6); omit high confidence
+    - { section: <id>, frame: "<frame name>", figmaNode: "<id>", confidence: medium|low, layout: { ... }, reasons: ["..."] }
   questions:
     - "<slug>/<section>: <question>"
 ```
