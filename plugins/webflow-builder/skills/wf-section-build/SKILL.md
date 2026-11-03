@@ -1,6 +1,6 @@
 ---
 name: wf-section-build
-description: Executes one plan-section.mjs plan in Webflow through the Webflow MCP — create custom classes, build WHTML, apply breakpoint styles bound to variables, attach assets, insert components, record build state. Use only from /webflow-builder:wf-build.
+description: Builds one site-spec section in Webflow in two phases — A) structure, headless (classes, WHTML, styles bound to variables, assets, components, natives, interactions); B) visual loop in the Designer (snapshot vs Figma, fixes stored as spec overrides). Use only from /webflow-builder:wf-build.
 ---
 
 # Build one section from its plan
@@ -15,16 +15,18 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/plan-section.mjs" site-spec <page> <section>
 
 Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml, styles[], assets[], components[], interactions[], placeholders[], natives[] }`.
 
-## Designer session (required, every build)
+## Two phases
 
-Always build with the Webflow Designer open for the site in Chrome, the MCP Bridge app connected and the target page on the canvas — never headless only.
+Built against **Webflow MCP v2.0.1** (see the official skill-migration guide when the MCP changes).
 
-- Before step 1: `designer_tool get_current_page`. Not connected → ask the developer to open the Designer for this site (tab in front, Bridge app running) and stop until it answers; do not fall back to a headless build. Then `designer_tool switch_page` to the target `pageId` if another page (or a component canvas) is open, and confirm `get_current_mode` is `design`.
-- The Webflow MCP has no separate Designer-only builders: elements, styles, components, settings and interactions are written with the `data_*` tools, and with the Designer connected they apply to the open canvas. Designer tools are for navigation, selection, snapshots and `asset_tool upload_image_by_url`.
-- After each structural write (steps 4, 6, 7, 8b) `designer_tool select_element` on the section root (or the element just created) so the developer sees it, and after step 5 take a quick `element_snapshot_tool` of the section to catch broken layout before the visual loop.
-- If the Designer disconnects mid-build: stop, ask the developer to reconnect, and resume from the last completed step (the captured element ids tell you where).
+| Phase | Steps | Needs the Designer | Status recorded |
+|---|---|---|---|
+| **A — Structure** (headless) | 1–10 | **No.** Elements, styles, variables, components, settings, natives and IX3 interactions are all `data_*` tools and work without the Designer (official guidance: never open or wait for a Designer session only to edit content). | `building` after step 4, `structure-built` after step 10 |
+| **B — Visual** (Designer) | 11–12 | **Yes**: `element_snapshot_tool`, `designer_tool` and `asset_tool upload_image_by_url` need the Webflow Designer open for the site in Chrome, tab in front, MCP Bridge app connected. | `built` |
 
-## Steps
+Phase A never waits for the Designer, so it can run unattended and be split across agents. Phase B runs one section at a time, with the developer present. A section is never `built` without phase B.
+
+## Phase A — Structure (headless)
 
 1. Validate names:
    ```bash
@@ -33,12 +35,15 @@ Always build with the Webflow Designer open for the site in Chrome, the MCP Brid
 2. `query_styles`: every `utilitiesUsed` must already exist (created by `/webflow-builder:wf-setup`). Missing → stop and tell the developer to run `/webflow-builder:wf-setup --update` (the spec gained a utility or surface after setup).
    **One class per element.** In Webflow a second class on an element is always stored as a combo class (`.a.b`) with its own, empty properties — a stacked global (`surface-*`, `text-color-*`, `text-align-*`, `text-size-*`) has no effect. The plan never stacks: surfaces, text colors and text alignment are already written as `styles[]` on the element's own class. The only two-class element is `button is-<variant>`, whose combo was created with its properties by `/webflow-builder:wf-setup` — apply that existing combo, never create a new one. If the plan's `whtml` ever has another two-class element, stop and report it.
 3. `data_style_tool create_style` for each `classesToCreate` not yet existing.
-4. `data_whtml_builder` with `whtml` (structure only, one call; the `<section>` carries `id="<section id>"` so navbar/footer anchors work — if the builder drops the attribute, set it with `data_element_settings_tool`) inside `main-wrapper` of the target page, **in spec order**: insert it before the element of the next spec section that already exists (find `section_<nextId>` with `query_elements`); append at the end only when no later section exists yet. Capture returned element ids.
+4. `data_whtml_builder` with `whtml` (structure only, one call; the `<section>` carries `id="<section id>"` so navbar/footer anchors work — if the builder drops the attribute, set it with `data_element_settings_tool`) inside `main-wrapper` of the target page, **in spec order**: insert it before the element of the next spec section that already exists (find `section_<nextId>` with `query_elements`); append at the end only when no later section exists yet. Capture returned element ids and record them right away, so an interruption never leaves an untracked duplicate:
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status building --hash <specHash> --ids <ids> --page-id <pageId>
+   ```
 5. `data_style_tool update_style` for each `styles[]` entry on its breakpoint; bind `variables` with `variable_as_value`.
 6. Assets — for each `assets[]` entry, target the `order`-th element with `targetClass`:
-   - `raster`: `data_assets_tool create_asset` from `site-spec/assets/<file>` (manifest `file` is relative to `site-spec/assets/`; 2x), then `set_image_asset` + alt.
-   - `svg`: insert an HtmlEmbed inside the target with the cleaned inline SVG (`data_element_tool set_settings`).
-7. Components — for each `components[]` entry, replace the `order`-th `targetClass` slot with an instance of the Webflow component `ref` (variant, props).
+   - `raster`: upload the local file `site-spec/assets/<file>` with `data_assets_tool` (manifest `file` is relative to `site-spec/assets/`; 2x), then `set_image_asset` + alt. Headless. If an image is only available as a URL, leave the slot and upload it in phase B with `asset_tool upload_image_by_url` (that action needs the Designer).
+   - `svg`: insert an HtmlEmbed inside the target with the cleaned inline SVG (`data_element_settings_tool set_settings`).
+7. Components — for each `components[]` entry, replace the `order`-th `targetClass` slot with an instance of the Webflow component `ref`; set its props with `data_component_props_tool set_component_instance_prop_values` and its variant with `data_component_variants_tool`.
 8. Interactions — for each `interactions[]` entry use the official `interactions` skill (IX3) on `targetClass`: plain `note` entries as described; `type: marquee` → infinite linear loop of `translateX` 0 → -50% (right: -50% → 0) over `speed` s on the track; `type: counter` → count-up on scroll into view if IX3 supports it, else list it as manual work.
 8b. Natives — for each `natives[]` entry, find the `order`-th element with `targetClass` (an empty div from the WHTML) and create the native element inside it with `data_element_builder` (`type` from the entry). Read the element's settings with `data_element_settings_tool get_settings` before writing options. Then:
    - `Slider`: one slide per `items[]` (add/remove slides to match the count); give each slide the class `classes.slide` and fill it with `items[i].whtml` (`data_whtml_builder` inside the slide). Options: `arrows` / `dots` → show/hide the arrow and nav elements; `autoplay`, `interval`, `loop` → slider settings. Leave the slider mask overflow visible only if `perView` > 1.
@@ -54,16 +59,25 @@ Always build with the Webflow Designer open for the site in Chrome, the MCP Brid
     - every `natives[]` entry exists inside its `targetClass` with `items.length` slides / tabs / dropdowns.
     - `query_styles` on every class of the section: no style with `isComboClass: true` and no properties. Names alone are not enough — an empty combo looks correct by name but renders nothing. An empty combo found → remove it from the element, put the properties on the element's own class (from `styles[]`), recheck once.
     Missing or empty → fix, reapply, recheck once.
+    Then record the end of phase A:
+    ```bash
+    node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status structure-built --hash <specHash> --ids <ids> --page-id <pageId>
+    ```
+
+## Phase B — Visual (Designer)
+
+Start of phase B (once per run): `designer_tool get_current_page`. Not connected → ask the developer to open the Webflow Designer for this site in Chrome (tab in front, MCP Bridge app running) and wait for the answer; never record a section as `built` without this phase. Then `designer_tool switch_page` to the target `pageId` and confirm `get_current_mode` is `design`. If the Designer disconnects mid-loop: stop, ask to reconnect, resume the loop of the current section — its structure is already safe (`structure-built`).
+
 11. **Visual loop (max 3 iterations).** The structure from the YAML is only a first pass; fidelity comes from comparing with Figma, as in QA, but while building.
     1. Reference: Figma `get_screenshot` of the section `figmaNode` (once) and `get_design_context` for its CSS reference — for frames without auto layout that reference gives the real widths, offsets and overlaps.
-    2. Snapshot: `designer_tool` opens the page on the canvas, then `element_snapshot_tool` on the `section_<id>` element at 1440px. Designer not connected → ask the developer to open the Webflow Designer for this site with its tab in front and wait for the answer, then retry; never skip the loop or record the section as built without it (see "Designer session").
+    2. Snapshot: `designer_tool select_element` on `section_<id>` (so the developer sees it), then `element_snapshot_tool` of it at 1440px. Upload any URL-only images left from step 6 first.
     3. Compare with the `wf-qa-reviewer` agent (one at a time, never in parallel): diffs by severity.
     4. No high or medium diffs → stop the loop.
     5. Fix in the **spec**, never only in Webflow, so a rebuild reproduces it:
        - Spacing, sizes, columns, alignment, positions → `overrides` on the section in `site-spec/pages/<page>.yaml`, own classes only (`section_<id>`, `<id>_*`), per breakpoint. A value equal to a token is written as `$<token>` (validate-spec rejects the raw value).
        - Missing / extra / wrong element, wrong copy order → the section's `children`.
        - Overlapping decorative layers → `decorative: true` + `position`.
-       Then `validate-spec`, re-run `plan-section` and apply only what changed: `update_style` for changed entries plus `remove_properties` for properties the plan no longer sets; rebuild the WHTML only when `children` changed (delete the section's elements first).
+       Then `validate-spec`, re-run `plan-section` and apply only what changed with the headless `data_*` tools: `update_style` for changed entries plus `remove_properties` for properties the plan no longer sets; rebuild the WHTML only when `children` changed (delete the section's elements first).
     6. After every iteration: `validate-class-names` on the plan's classes, no empty combos (`query_styles`), no hard-coded token values (validate-spec covers overrides).
     7. After the 3rd iteration, stop even if diffs remain: they go to `--pending`.
     Do not use absolute positioning to match the screenshot except for `decorative` layers; prefer flex/grid overrides so tablet and mobile keep working.
@@ -74,7 +88,7 @@ Always build with the Webflow Designer open for the site in Chrome, the MCP Brid
 
 On a failure that persists after one retry:
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status failed --error "<tool>: <message>" --ids <ids captured in step 4, if step 4 ran>
+node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status failed --error "<tool>: <message>" --ids <ids captured in step 4, if step 4 ran>   # phase B failures keep status structure-built instead
 ```
 Passing the partial ids lets the next `/webflow-builder:wf-build` delete them instead of leaving a half-built duplicate.
 then stop.

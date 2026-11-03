@@ -24,6 +24,8 @@ Page: $ARGUMENTS
 
 ## 2. Visual
 
+Before comparing, list sections whose build-state is `structure-built` or `building`: they never went through the visual phase. Report them as **not built** and suggest `/webflow-builder:wf-build <page> --phase visual`; do not count them as QA failures of the page.
+
 Each section was already compared during `/webflow-builder:wf-build` (build-state `visual`). Here QA confirms the whole page: re-compare every section once at 1440 to catch regressions from later sections, and report the build's `pending` diffs next to the new ones.
 
 Run one `wf-qa-reviewer` agent per built section **one at a time** — wait for each to finish before starting the next. Parallel reviewers overload the Designer Bridge (seen: 14 in parallel → only 3 visual comparisons completed). Keep the Designer connected and its tab in the foreground; if the bridge drops, reconnect and resume from the first section without a visual result. Tablet/mobile: ask the developer whether to publish to the `.webflow.io` staging subdomain; only on an explicit yes use the official `safe-publish` flow for staging, then capture 1440/768/375 px screenshots with the browser. Otherwise mark tablet/mobile as **unverified**.

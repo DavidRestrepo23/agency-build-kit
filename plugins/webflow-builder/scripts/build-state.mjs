@@ -20,8 +20,8 @@ function runCli(main) {
 // src/lib/build-state.mjs
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-var SECTION_STATUSES = ["pending", "built", "failed", "qa-pass", "qa-fail"];
-var UP_TO_DATE = /* @__PURE__ */ new Set(["built", "qa-pass"]);
+var SECTION_STATUSES = ["pending", "building", "structure-built", "built", "failed", "qa-pass", "qa-fail"];
+var STRUCTURE_UP_TO_DATE = /* @__PURE__ */ new Set(["structure-built", "built", "qa-pass"]);
 var SETUP_STATUSES = ["pending", "done", "failed"];
 function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId, visual }) {
   if (!SECTION_STATUSES.includes(status)) throw new Error(`invalid status "${status}"`);
@@ -67,7 +67,11 @@ function setSetupState(state, { platform, siteId, status }) {
 }
 function sectionNeedsBuild(state, platform, page, section, specHash) {
   const entry = state?.[platform]?.pages?.[page]?.sections?.[section];
-  return !(entry && UP_TO_DATE.has(entry.status) && entry.specHash === specHash);
+  return !(entry && STRUCTURE_UP_TO_DATE.has(entry.status) && entry.specHash === specHash);
+}
+function sectionNeedsVisual(state, platform, page, section, specHash) {
+  const entry = state?.[platform]?.pages?.[page]?.sections?.[section];
+  return Boolean(entry && entry.status === "structure-built" && entry.specHash === specHash);
 }
 function readState(specDir) {
   const path = join(specDir, "build-state.json");
@@ -104,7 +108,8 @@ runCli((argv) => {
   }
   if (command === "get") {
     const current = state?.[values.platform]?.pages?.[values.page]?.sections?.[values.section] ?? null;
-    return { ok: true, needsBuild: sectionNeedsBuild(state, values.platform, values.page, values.section, values.hash), current };
+    const args = [state, values.platform, values.page, values.section, values.hash];
+    return { ok: true, needsBuild: sectionNeedsBuild(...args), needsVisual: sectionNeedsVisual(...args), current };
   }
   if (command === "set-section") {
     const next = setSectionState(state, {

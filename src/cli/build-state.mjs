@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { runCli } from '../lib/cli.mjs';
-import { readState, sectionNeedsBuild, setSectionState, setSetupState, writeState } from '../lib/build-state.mjs';
+import { readState, sectionNeedsBuild, sectionNeedsVisual, setSectionState, setSetupState, writeState } from '../lib/build-state.mjs';
 
 const OPTIONS = {
   platform: { type: 'string', default: 'webflow' },
@@ -26,7 +26,8 @@ runCli((argv) => {
 
   if (command === 'get') {
     const current = state?.[values.platform]?.pages?.[values.page]?.sections?.[values.section] ?? null;
-    return { ok: true, needsBuild: sectionNeedsBuild(state, values.platform, values.page, values.section, values.hash), current };
+    const args = [state, values.platform, values.page, values.section, values.hash];
+    return { ok: true, needsBuild: sectionNeedsBuild(...args), needsVisual: sectionNeedsVisual(...args), current };
   }
   if (command === 'set-section') {
     const next = setSectionState(state, {

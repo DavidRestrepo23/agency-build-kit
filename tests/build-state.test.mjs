@@ -89,3 +89,30 @@ test('CLI set-section accepts --iterations and --pending', () => {
   assert.equal(run.status, 0, run.stdout);
   assert.deepEqual(JSON.parse(run.stdout).current.visual, { iterations: 3, pending: ['a', 'b'] });
 });
+
+test('hybrid: structure-built needs only the visual phase; building needs a rebuild', async () => {
+  const { sectionNeedsVisual } = await import('../src/lib/build-state.mjs');
+  let state = setSectionState({}, { ...base, status: 'building', specHash: 'sha256:a', elementIds: ['e1', 'e2'] });
+  assert.equal(sectionNeedsBuild(state, 'webflow', 'home', 'hero', 'sha256:a'), true, 'partial structure is rebuilt');
+  assert.deepEqual(state.webflow.pages.home.sections.hero.elementIds, ['e1', 'e2'], 'ids kept for cleanup');
+  assert.equal(sectionNeedsVisual(state, 'webflow', 'home', 'hero', 'sha256:a'), false);
+
+  state = setSectionState(state, { ...base, status: 'structure-built', specHash: 'sha256:a' });
+  assert.equal(sectionNeedsBuild(state, 'webflow', 'home', 'hero', 'sha256:a'), false);
+  assert.equal(sectionNeedsVisual(state, 'webflow', 'home', 'hero', 'sha256:a'), true);
+  assert.equal(sectionNeedsBuild(state, 'webflow', 'home', 'hero', 'sha256:b'), true, 'spec changed → structure again');
+  assert.equal(sectionNeedsVisual(state, 'webflow', 'home', 'hero', 'sha256:b'), false);
+
+  state = setSectionState(state, { ...base, status: 'built', specHash: 'sha256:c' });
+  assert.equal(sectionNeedsVisual(state, 'webflow', 'home', 'hero', 'sha256:c'), false);
+});
+
+test('CLI get reports needsVisual', () => {
+  const dir = copyFixture();
+  const set = (status) => spawnSync(process.execPath, ['src/cli/build-state.mjs', 'set-section', dir, '--page', 'home', '--section', 'hero', '--status', status, '--hash', 'h'], { encoding: 'utf8' });
+  assert.equal(set('structure-built').status, 0);
+  const run = spawnSync(process.execPath, ['src/cli/build-state.mjs', 'get', dir, '--page', 'home', '--section', 'hero', '--hash', 'h'], { encoding: 'utf8' });
+  const out = JSON.parse(run.stdout);
+  assert.equal(out.needsBuild, false);
+  assert.equal(out.needsVisual, true);
+});

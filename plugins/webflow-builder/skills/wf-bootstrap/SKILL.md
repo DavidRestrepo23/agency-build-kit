@@ -5,7 +5,7 @@ description: Executes the plan-setup.mjs output in an empty Webflow site through
 
 # Webflow bootstrap from plan-setup
 
-Before acting, load `webflow-mcp:figma-to-webflow` (official plugin) and read its `references/css-rules.md`. Its gates apply. Agency overrides for its required prompts: build mode **headless**, variables **create new system**, naming **Client-First**, units **rem**. Do not ask those four questions.
+Before acting, load `webflow-mcp:figma-to-webflow` (official plugin) and read its `references/css-rules.md`. Its gates apply. Agency overrides for its required prompts: build mode **headless**, variables **create new system**, naming **Client-First**, units **rem**. Do not ask those four questions. Setup never needs the Designer (built against Webflow MCP v2.0.1: variables, styles, pages and components are headless `data_*` tools).
 
 ## Input
 
@@ -21,7 +21,7 @@ Shape: `{ ok, variables[], fonts[], styles[], classes[], components[] }` (`style
 
 1. `webflow_guide_tool` once; `whoami` + `get_site` → record `siteId`.
 2. **Variables:** create collections `Colors`, `Typography`, `Spacing` and every entry of `variables[]` (`type: color` → color variable, `type: size` → size variable in rem). Use the variable tool named by `webflow_guide_tool`. Skip variables that already exist with the same value; if one exists with a different value, stop and report.
-3. **Fonts:** `data_fonts_tool` for each `fonts[]` entry (Google source or upload). Never add `<link>` tags to head.
+3. **Fonts:** the MCP only manages **uploaded** font files. For `source: upload` entries use `data_fonts_tool` with the files. For `source: google` (and Adobe) the MCP cannot add them: ask the developer to add each family and its weights in **Site settings → Fonts** (Google Fonts) and wait for confirmation, then continue. Never add `<link>` tags to head.
 4. **Classes:** for every name in `classes[]` call `data_style_tool create_style` (combos from entries with `comboOf` are created as combo classes on their base). Then verify with `query_styles` that all exist.
 5. **Styles:** for each `styles[]` entry call `data_style_tool update_style` on its breakpoint (`main`, `medium`, `small`, `tiny`) with `props` as native longhand properties and each `variables` entry bound with `variable_as_value`. Never use WHTML `css` or embed `<style>`.
 6. **Style guide page:** create page `style-guide` (`data_pages_tool`) and build sections with `data_whtml_builder` showing every color (background-color utility swatches), every `heading-style-*` / `text-size-*` sample, spacing samples and every button variant.

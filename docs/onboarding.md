@@ -109,6 +109,10 @@ Sal (`/exit`) y vuelve a entrar con `claude`.
 2. Dentro de `claude`, ejecuta `/mcp` y confirma que ambos aparecen conectados.
 3. El plugin `webflow-skills` trae su propio servidor MCP de Webflow. Si en `/mcp` aparece `webflow-skills:webflow` como *needs authentication*, selecciónalo y autorízalo (o ignóralo si ya tienes el conector de Webflow de claude.ai conectado: basta con uno).
 
+> Límites del MCP de Webflow (v2.0.1): cada autorización cubre **un workspace**; los sitios **no se pueden crear por MCP** (crea el sitio vacío en el dashboard antes de `/webflow-builder:wf-setup`); las **Google Fonts** se agregan a mano en *Site settings → Fonts* (el kit te lo pedirá).
+>
+> El Designer con la **MCP Bridge app** solo hace falta en la fase visual de `/webflow-builder:wf-build` (snapshots) y en `/webflow-builder:wf-qa`. La estructura de las secciones se construye sin él (`--phase structure`).
+
 ### 2.5 Ajuste de Chrome (evita desconexiones con Designer)
 
 1. Abre `chrome://settings/performance`.

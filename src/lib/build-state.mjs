@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-export const SECTION_STATUSES = ['pending', 'built', 'failed', 'qa-pass', 'qa-fail'];
-const UP_TO_DATE = new Set(['built', 'qa-pass']);
+// building: structure partly written (ids kept for cleanup); structure-built: headless phase done, visual loop pending.
+export const SECTION_STATUSES = ['pending', 'building', 'structure-built', 'built', 'failed', 'qa-pass', 'qa-fail'];
+const STRUCTURE_UP_TO_DATE = new Set(['structure-built', 'built', 'qa-pass']);
 export const SETUP_STATUSES = ['pending', 'done', 'failed'];
 
 export function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId, visual }) {
@@ -51,7 +52,12 @@ export function setSetupState(state, { platform, siteId, status }) {
 
 export function sectionNeedsBuild(state, platform, page, section, specHash) {
   const entry = state?.[platform]?.pages?.[page]?.sections?.[section];
-  return !(entry && UP_TO_DATE.has(entry.status) && entry.specHash === specHash);
+  return !(entry && STRUCTURE_UP_TO_DATE.has(entry.status) && entry.specHash === specHash);
+}
+
+export function sectionNeedsVisual(state, platform, page, section, specHash) {
+  const entry = state?.[platform]?.pages?.[page]?.sections?.[section];
+  return Boolean(entry && entry.status === 'structure-built' && entry.specHash === specHash);
 }
 
 export function readState(specDir) {
