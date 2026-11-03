@@ -14280,6 +14280,122 @@ var import_ajv = __toESM(require_ajv(), 1);
 import { existsSync as existsSync2 } from "node:fs";
 import { join as join2 } from "node:path";
 
+// src/lib/class-names.mjs
+var SEGMENT = "[a-z0-9]+(?:-[a-z0-9]+)*";
+var CUSTOM = new RegExp(`^${SEGMENT}_${SEGMENT}$`);
+var COMBO = new RegExp(`^is-${SEGMENT}$`);
+
+// src/lib/units.mjs
+function pxToRem(px) {
+  if (typeof px !== "number" || Number.isNaN(px)) {
+    throw new TypeError(`pxToRem expects a number, got ${JSON.stringify(px)}`);
+  }
+  return `${Number((px / 16).toFixed(4))}rem`;
+}
+
+// src/lib/responsive.mjs
+function resolveResponsive(value) {
+  if (typeof value === "number" || typeof value === "string") {
+    return { main: value, medium: value, small: value, tiny: value };
+  }
+  if (value && typeof value === "object" && "desktop" in value) {
+    const main = value.desktop;
+    const medium = value.tablet ?? main;
+    const small = value.mobileLandscape ?? value.mobile ?? medium;
+    const tiny = value.mobile ?? small;
+    return { main, medium, small, tiny };
+  }
+  throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
+}
+
+// src/lib/variables.mjs
+function variableName(token) {
+  return token.replaceAll(".", "-");
+}
+function responsiveVariableNames(token, value, suffix = "") {
+  const resolved = resolveResponsive(value);
+  const base = variableName(token) + suffix;
+  const out = { main: { name: base, value: resolved.main } };
+  if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
+  const landscape = value && typeof value === "object" && value.mobileLandscape !== void 0;
+  if (resolved.small !== resolved.medium) out.small = { name: `${base}-${landscape ? "mobile-landscape" : "mobile"}`, value: resolved.small };
+  if (resolved.tiny !== resolved.small) out.tiny = { name: `${base}-mobile`, value: resolved.tiny };
+  return out;
+}
+
+// src/lib/components.mjs
+function primaryVariantName(component) {
+  if (!component?.variants?.length) return null;
+  return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
+}
+
+// src/lib/styles.mjs
+var SIDES = ["top", "right", "bottom", "left"];
+var CORNERS = ["top-left", "top-right", "bottom-right", "bottom-left"];
+function letterSpacingEm(type) {
+  const size = resolveResponsive(type.size).main;
+  return `${Number((type.letterSpacing / size).toFixed(4))}em`;
+}
+function typographyStyles(cls, type) {
+  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
+  if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
+  if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
+  return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
+    class: cls,
+    breakpoint: bp,
+    props: bp === "main" ? props : {},
+    variables: { "font-size": name }
+  }));
+}
+function surfaceStyles(cls, surface, spec) {
+  const props = {};
+  const vars = {};
+  if (surface.background) vars["background-color"] = variableName(surface.background);
+  if (surface.border) {
+    for (const side of SIDES) {
+      props[`border-${side}-width`] = `${surface.border.width}px`;
+      props[`border-${side}-style`] = "solid";
+      vars[`border-${side}-color`] = variableName(surface.border.color);
+    }
+  }
+  if (surface.radius !== void 0) {
+    for (const corner of CORNERS) props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
+    props.overflow = "hidden";
+  }
+  const padding = {};
+  for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
+    const token = surface.padding?.[axis];
+    if (!token) continue;
+    for (const [bp, { name }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
+      padding[bp] ??= {};
+      for (const side of sides) padding[bp][`padding-${side}`] = name;
+    }
+  }
+  const out = [{ class: cls, breakpoint: "main", props, variables: { ...vars, ...padding.main } }];
+  for (const [bp, variables] of Object.entries(padding)) {
+    if (bp !== "main") out.push({ class: cls, breakpoint: bp, props: {}, variables });
+  }
+  return out;
+}
+
+// src/lib/qa-structural.mjs
+function tokenValueIndex(spec) {
+  const index = /* @__PURE__ */ new Map();
+  const put = (key, token) => {
+    if (!index.has(key)) index.set(key, token);
+  };
+  for (const color of spec.tokens.colors) put(color.value.toLowerCase(), color.name);
+  const addSize = (token, value) => {
+    for (const px of new Set(Object.values(resolveResponsive(value)))) {
+      put(pxToRem(px), token);
+      put(`${px}px`, token);
+    }
+  };
+  for (const [token, value] of Object.entries(spec.tokens.spacing)) addSize(token, value);
+  for (const type of spec.tokens.typography) addSize(type.name, type.size);
+  return index;
+}
+
 // plugins/build-core/skills/site-spec/schemas/common.schema.json
 var common_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
@@ -14770,6 +14886,35 @@ var page_schema_default = {
         },
         surface: {
           $ref: "common.schema.json#/definitions/kebab"
+        },
+        overrides: {
+          type: "object",
+          propertyNames: {
+            pattern: "^[a-z0-9]+(-[a-z0-9]+)*_[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          additionalProperties: {
+            type: "object",
+            minProperties: 1,
+            propertyNames: {
+              enum: [
+                "main",
+                "medium",
+                "small",
+                "tiny"
+              ]
+            },
+            additionalProperties: {
+              type: "object",
+              minProperties: 1,
+              propertyNames: {
+                pattern: "^[a-z]+(-[a-z]+)*$"
+              },
+              additionalProperties: {
+                type: "string",
+                minLength: 1
+              }
+            }
+          }
         }
       }
     },
@@ -15398,6 +15543,27 @@ function crossReferenceErrors(spec) {
     if (["video", "lightbox"].includes(behavior.type) && !behavior.url) err(file, `${path}/url`, `${behavior.type} needs the video url`);
     if (behavior.type === "modal" && !behavior.trigger) err(file, `${path}/trigger`, "modal needs the trigger button text");
   };
+  const tokenNames = /* @__PURE__ */ new Set([...colors, ...spacing]);
+  const valueIndex = tokenValueIndex(spec);
+  const checkOverrides = (file, section, path) => {
+    for (const [cls, breakpoints] of Object.entries(section.overrides ?? {})) {
+      if (cls !== `section_${section.id}` && !cls.startsWith(`${section.id}_`)) {
+        err(file, `${path}/${cls}`, `overrides may only target the section's own classes (section_${section.id}, ${section.id}_*)`);
+        continue;
+      }
+      for (const [bp, props] of Object.entries(breakpoints)) {
+        for (const [prop, value] of Object.entries(props)) {
+          const at = `${path}/${cls}/${bp}/${prop}`;
+          if (value.startsWith("$")) {
+            if (!tokenNames.has(value.slice(1))) err(file, at, `unknown token "${value.slice(1)}"`);
+            continue;
+          }
+          const token = valueIndex.get(value.trim().toLowerCase());
+          if (token) err(file, at, `${prop}: ${value} matches token "${token}"; write "$${token}" so it binds the variable`);
+        }
+      }
+    }
+  };
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
@@ -15459,6 +15625,7 @@ function crossReferenceErrors(spec) {
       checkLayout(file, section.layout, `${base}/layout`);
       const groupNames = /* @__PURE__ */ new Set();
       section.children.forEach((child, i) => checkChild(file, child, `${base}/children/${i}`, groupNames));
+      checkOverrides(file, section, `${base}/overrides`);
     });
   }
   return errors;
@@ -15483,99 +15650,6 @@ function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
   if (errors.length === 0) errors.push(...crossReferenceErrors(spec));
   if (requireResolvedQuestions) errors.push(...openQuestionErrors(spec.openQuestions));
   return { ok: errors.length === 0, errors };
-}
-
-// src/lib/units.mjs
-function pxToRem(px) {
-  if (typeof px !== "number" || Number.isNaN(px)) {
-    throw new TypeError(`pxToRem expects a number, got ${JSON.stringify(px)}`);
-  }
-  return `${Number((px / 16).toFixed(4))}rem`;
-}
-
-// src/lib/responsive.mjs
-function resolveResponsive(value) {
-  if (typeof value === "number" || typeof value === "string") {
-    return { main: value, medium: value, small: value, tiny: value };
-  }
-  if (value && typeof value === "object" && "desktop" in value) {
-    const main = value.desktop;
-    const medium = value.tablet ?? main;
-    const small = value.mobileLandscape ?? value.mobile ?? medium;
-    const tiny = value.mobile ?? small;
-    return { main, medium, small, tiny };
-  }
-  throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
-}
-
-// src/lib/variables.mjs
-function variableName(token) {
-  return token.replaceAll(".", "-");
-}
-function responsiveVariableNames(token, value, suffix = "") {
-  const resolved = resolveResponsive(value);
-  const base = variableName(token) + suffix;
-  const out = { main: { name: base, value: resolved.main } };
-  if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
-  const landscape = value && typeof value === "object" && value.mobileLandscape !== void 0;
-  if (resolved.small !== resolved.medium) out.small = { name: `${base}-${landscape ? "mobile-landscape" : "mobile"}`, value: resolved.small };
-  if (resolved.tiny !== resolved.small) out.tiny = { name: `${base}-mobile`, value: resolved.tiny };
-  return out;
-}
-
-// src/lib/components.mjs
-function primaryVariantName(component) {
-  if (!component?.variants?.length) return null;
-  return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
-}
-
-// src/lib/styles.mjs
-var SIDES = ["top", "right", "bottom", "left"];
-var CORNERS = ["top-left", "top-right", "bottom-right", "bottom-left"];
-function letterSpacingEm(type) {
-  const size = resolveResponsive(type.size).main;
-  return `${Number((type.letterSpacing / size).toFixed(4))}em`;
-}
-function typographyStyles(cls, type) {
-  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
-  if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
-  if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
-  return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
-    class: cls,
-    breakpoint: bp,
-    props: bp === "main" ? props : {},
-    variables: { "font-size": name }
-  }));
-}
-function surfaceStyles(cls, surface, spec) {
-  const props = {};
-  const vars = {};
-  if (surface.background) vars["background-color"] = variableName(surface.background);
-  if (surface.border) {
-    for (const side of SIDES) {
-      props[`border-${side}-width`] = `${surface.border.width}px`;
-      props[`border-${side}-style`] = "solid";
-      vars[`border-${side}-color`] = variableName(surface.border.color);
-    }
-  }
-  if (surface.radius !== void 0) {
-    for (const corner of CORNERS) props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
-    props.overflow = "hidden";
-  }
-  const padding = {};
-  for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
-    const token = surface.padding?.[axis];
-    if (!token) continue;
-    for (const [bp, { name }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
-      padding[bp] ??= {};
-      for (const side of sides) padding[bp][`padding-${side}`] = name;
-    }
-  }
-  const out = [{ class: cls, breakpoint: "main", props, variables: { ...vars, ...padding.main } }];
-  for (const [bp, variables] of Object.entries(padding)) {
-    if (bp !== "main") out.push({ class: cls, breakpoint: bp, props: {}, variables });
-  }
-  return out;
 }
 
 // src/lib/plan-setup.mjs

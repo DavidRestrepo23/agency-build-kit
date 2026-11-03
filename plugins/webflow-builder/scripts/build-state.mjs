@@ -23,7 +23,7 @@ import { join } from "node:path";
 var SECTION_STATUSES = ["pending", "built", "failed", "qa-pass", "qa-fail"];
 var UP_TO_DATE = /* @__PURE__ */ new Set(["built", "qa-pass"]);
 var SETUP_STATUSES = ["pending", "done", "failed"];
-function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId }) {
+function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId, visual }) {
   if (!SECTION_STATUSES.includes(status)) throw new Error(`invalid status "${status}"`);
   const platformState = state[platform] ?? {};
   const pages = platformState.pages ?? {};
@@ -35,6 +35,7 @@ function setSectionState(state, { platform, page, section, status, specHash, ele
     specHash: specHash ?? previous.specHash ?? null,
     elementIds: elementIds ?? previous.elementIds ?? [],
     error: status === "failed" ? error ?? "unknown error" : null,
+    ...visual ? { visual } : {},
     at: (/* @__PURE__ */ new Date()).toISOString()
   };
   return {
@@ -90,7 +91,9 @@ var OPTIONS = {
   ids: { type: "string" },
   error: { type: "string" },
   "page-id": { type: "string" },
-  "site-id": { type: "string" }
+  "site-id": { type: "string" },
+  iterations: { type: "string" },
+  pending: { type: "string" }
 };
 runCli((argv) => {
   const { values, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
@@ -112,7 +115,8 @@ runCli((argv) => {
       specHash: values.hash,
       elementIds: values.ids ? values.ids.split(",").filter(Boolean) : void 0,
       error: values.error,
-      pageId: values["page-id"]
+      pageId: values["page-id"],
+      visual: values.iterations !== void 0 ? { iterations: Number(values.iterations), pending: (values.pending ?? "").split(";").map((s) => s.trim()).filter(Boolean) } : void 0
     });
     writeState(specDir, next);
     return { ok: true, current: next[values.platform].pages[values.page].sections[values.section] };

@@ -75,3 +75,17 @@ test('final review: CLI rejects set-section without page or section', () => {
 test('final review: setup status is restricted', () => {
   assert.throws(() => setSetupState({}, { platform: 'webflow', siteId: 's', status: 'bogus' }), /invalid setup status "bogus"/);
 });
+
+test('visual loop: iterations and pending diffs are recorded on the section', () => {
+  let state = setSectionState({}, { platform: 'webflow', page: 'home', section: 'hero', status: 'built', specHash: 'h', visual: { iterations: 2, pending: ['logo 6px lower'] } });
+  assert.deepEqual(state.webflow.pages.home.sections.hero.visual, { iterations: 2, pending: ['logo 6px lower'] });
+  state = setSectionState(state, { platform: 'webflow', page: 'home', section: 'hero', status: 'qa-pass' });
+  assert.deepEqual(state.webflow.pages.home.sections.hero.visual, { iterations: 2, pending: ['logo 6px lower'] }, 'kept when not given');
+});
+
+test('CLI set-section accepts --iterations and --pending', () => {
+  const dir = copyFixture();
+  const run = spawnSync(process.execPath, ['src/cli/build-state.mjs', 'set-section', dir, '--page', 'home', '--section', 'hero', '--status', 'built', '--hash', 'h', '--iterations', '3', '--pending', 'a;b'], { encoding: 'utf8' });
+  assert.equal(run.status, 0, run.stdout);
+  assert.deepEqual(JSON.parse(run.stdout).current.visual, { iterations: 3, pending: ['a', 'b'] });
+});

@@ -345,3 +345,32 @@ test('several decorative children get numbered wrappers', () => {
   assert.ok(hero.classesToCreate.includes('hero_decor-2'));
   assert.equal(hero.styles.find((x) => x.class === 'hero_decor-2' && x.breakpoint === 'main').props.top, '0.625rem');
 });
+
+test('overrides: applied last on their class and breakpoint, tokens become variables, raw replaces variable', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[1].overrides = {
+      features_grid: {
+        main: { 'grid-template-columns': '715fr 501fr', 'padding-top': '$space.lg' },
+        tiny: { display: 'block' },
+      },
+      features_component: { main: { 'grid-row-gap': '3.5rem' } },
+    };
+  });
+  const plan = planSection(loadSpec(dir), 'home', 'features');
+  const grid = plan.styles.filter((s) => s.class === 'features_grid');
+  const main = grid.find((s) => s.breakpoint === 'main');
+  assert.equal(main.props['grid-template-columns'], '715fr 501fr');
+  assert.equal(main.variables['padding-top'], 'space-lg');
+  assert.equal(main.props['padding-top'], undefined);
+  assert.deepEqual(grid.find((s) => s.breakpoint === 'tiny').props, { display: 'block' });
+  const component = plan.styles.find((s) => s.class === 'features_component' && s.breakpoint === 'main');
+  assert.equal(component.props['grid-row-gap'], '3.5rem');
+  assert.equal(component.variables['grid-row-gap'], undefined, 'raw override replaces the bound variable');
+});
+
+test('overrides: a class the plan does not generate is an error', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].overrides = { features_ghost: { main: { width: '1px' } } }; });
+  assert.throws(() => planSection(loadSpec(dir), 'home', 'features'), /override class "features_ghost" is not generated/);
+});

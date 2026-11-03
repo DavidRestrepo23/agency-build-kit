@@ -12,6 +12,8 @@ const OPTIONS = {
   error: { type: 'string' },
   'page-id': { type: 'string' },
   'site-id': { type: 'string' },
+  iterations: { type: 'string' },
+  pending: { type: 'string' },
 };
 
 runCli((argv) => {
@@ -36,6 +38,9 @@ runCli((argv) => {
       elementIds: values.ids ? values.ids.split(',').filter(Boolean) : undefined,
       error: values.error,
       pageId: values['page-id'],
+      visual: values.iterations !== undefined
+        ? { iterations: Number(values.iterations), pending: (values.pending ?? '').split(';').map((s) => s.trim()).filter(Boolean) }
+        : undefined,
     });
     writeState(specDir, next);
     return { ok: true, current: next[values.platform].pages[values.page].sections[values.section] };

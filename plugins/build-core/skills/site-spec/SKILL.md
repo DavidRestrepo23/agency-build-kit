@@ -86,6 +86,18 @@ A `group` can declare a `behavior`; its `children` are the items. Builders turn 
 
 Only groups take a behavior. Never write one from a guess — `/build-core:build-audit` asks the developer.
 
+## Overrides (visual corrections)
+
+`/webflow-builder:wf-build` compares each built section with Figma and writes its corrections here, so a rebuild reproduces them. Only the section's own classes (`section_<id>`, `<id>_*`), per breakpoint (`main`, `medium`, `small`, `tiny`), CSS property → value. `$token` binds a variable; a raw value equal to a token is rejected.
+
+```yaml
+- id: services
+  overrides:
+    services_grid: { main: { grid-template-columns: "715fr 501fr", grid-row-gap: "$space.lg" }, medium: { grid-template-columns: "1fr" } }
+```
+
+Overrides are applied last and win over the generated styles. Review them in the diff: they are where the build deviated from the inferred layout.
+
 ## Child types
 
 `heading` (level, style, text) · `text` (style, text) · `rich-text` (text; blank line = new paragraph; `**bold**` → `<strong>`, `*italic*` → `<em>`, everything else is escaped) · `image` (asset, alt, ratio "w/h") · `svg` (asset) · `link` (text, href) · `button` (text, href, variant?) · `list` (items) · `group` (name, layout?, surface?, behavior?, children)

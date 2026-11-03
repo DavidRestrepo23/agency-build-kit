@@ -14280,6 +14280,52 @@ var import_ajv = __toESM(require_ajv(), 1);
 import { existsSync as existsSync2 } from "node:fs";
 import { join as join2 } from "node:path";
 
+// src/lib/class-names.mjs
+var SEGMENT = "[a-z0-9]+(?:-[a-z0-9]+)*";
+var CUSTOM = new RegExp(`^${SEGMENT}_${SEGMENT}$`);
+var COMBO = new RegExp(`^is-${SEGMENT}$`);
+
+// src/lib/units.mjs
+function pxToRem(px) {
+  if (typeof px !== "number" || Number.isNaN(px)) {
+    throw new TypeError(`pxToRem expects a number, got ${JSON.stringify(px)}`);
+  }
+  return `${Number((px / 16).toFixed(4))}rem`;
+}
+
+// src/lib/responsive.mjs
+function resolveResponsive(value) {
+  if (typeof value === "number" || typeof value === "string") {
+    return { main: value, medium: value, small: value, tiny: value };
+  }
+  if (value && typeof value === "object" && "desktop" in value) {
+    const main = value.desktop;
+    const medium = value.tablet ?? main;
+    const small = value.mobileLandscape ?? value.mobile ?? medium;
+    const tiny = value.mobile ?? small;
+    return { main, medium, small, tiny };
+  }
+  throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
+}
+
+// src/lib/qa-structural.mjs
+function tokenValueIndex(spec) {
+  const index = /* @__PURE__ */ new Map();
+  const put = (key, token) => {
+    if (!index.has(key)) index.set(key, token);
+  };
+  for (const color of spec.tokens.colors) put(color.value.toLowerCase(), color.name);
+  const addSize = (token, value) => {
+    for (const px of new Set(Object.values(resolveResponsive(value)))) {
+      put(pxToRem(px), token);
+      put(`${px}px`, token);
+    }
+  };
+  for (const [token, value] of Object.entries(spec.tokens.spacing)) addSize(token, value);
+  for (const type of spec.tokens.typography) addSize(type.name, type.size);
+  return index;
+}
+
 // plugins/build-core/skills/site-spec/schemas/common.schema.json
 var common_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
@@ -14770,6 +14816,35 @@ var page_schema_default = {
         },
         surface: {
           $ref: "common.schema.json#/definitions/kebab"
+        },
+        overrides: {
+          type: "object",
+          propertyNames: {
+            pattern: "^[a-z0-9]+(-[a-z0-9]+)*_[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          additionalProperties: {
+            type: "object",
+            minProperties: 1,
+            propertyNames: {
+              enum: [
+                "main",
+                "medium",
+                "small",
+                "tiny"
+              ]
+            },
+            additionalProperties: {
+              type: "object",
+              minProperties: 1,
+              propertyNames: {
+                pattern: "^[a-z]+(-[a-z]+)*$"
+              },
+              additionalProperties: {
+                type: "string",
+                minLength: 1
+              }
+            }
+          }
         }
       }
     },
@@ -15398,6 +15473,27 @@ function crossReferenceErrors(spec) {
     if (["video", "lightbox"].includes(behavior.type) && !behavior.url) err(file, `${path}/url`, `${behavior.type} needs the video url`);
     if (behavior.type === "modal" && !behavior.trigger) err(file, `${path}/trigger`, "modal needs the trigger button text");
   };
+  const tokenNames = /* @__PURE__ */ new Set([...colors, ...spacing]);
+  const valueIndex = tokenValueIndex(spec);
+  const checkOverrides = (file, section, path) => {
+    for (const [cls, breakpoints] of Object.entries(section.overrides ?? {})) {
+      if (cls !== `section_${section.id}` && !cls.startsWith(`${section.id}_`)) {
+        err(file, `${path}/${cls}`, `overrides may only target the section's own classes (section_${section.id}, ${section.id}_*)`);
+        continue;
+      }
+      for (const [bp, props] of Object.entries(breakpoints)) {
+        for (const [prop, value] of Object.entries(props)) {
+          const at = `${path}/${cls}/${bp}/${prop}`;
+          if (value.startsWith("$")) {
+            if (!tokenNames.has(value.slice(1))) err(file, at, `unknown token "${value.slice(1)}"`);
+            continue;
+          }
+          const token = valueIndex.get(value.trim().toLowerCase());
+          if (token) err(file, at, `${prop}: ${value} matches token "${token}"; write "$${token}" so it binds the variable`);
+        }
+      }
+    }
+  };
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
@@ -15459,6 +15555,7 @@ function crossReferenceErrors(spec) {
       checkLayout(file, section.layout, `${base}/layout`);
       const groupNames = /* @__PURE__ */ new Set();
       section.children.forEach((child, i) => checkChild(file, child, `${base}/children/${i}`, groupNames));
+      checkOverrides(file, section, `${base}/overrides`);
     });
   }
   return errors;

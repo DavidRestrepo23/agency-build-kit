@@ -291,3 +291,32 @@ test('decorative: position and keepOnMobile need decorative: true', () => {
   editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].children[3].decorative = true; });
   assert.deepEqual(errorsFor(dir), []);
 });
+
+function withOverrides(overrides) {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].overrides = overrides; });
+  return dir;
+}
+
+test('overrides: own classes with raw values and $token references are valid', () => {
+  assert.deepEqual(errorsFor(withOverrides({
+    features_grid: { main: { 'grid-template-columns': '715fr 501fr', 'margin-top': '$space.lg' }, small: { position: 'static' } },
+    section_features: { main: { 'background-color': '$brand.surface' } },
+  })), []);
+});
+
+test('overrides: only the section own classes, known breakpoints and known tokens', () => {
+  const errors = errorsFor(withOverrides({
+    hero_component: { main: { width: '50%' } },
+    features_grid: { main: { 'margin-top': '$space.missing' } },
+  }));
+  assert.ok(errors.some((e) => e.path === '/sections/1/overrides/hero_component' && /own classes/.test(e.message)), JSON.stringify(errors));
+  assert.ok(errors.some((e) => /unknown token "space\.missing"/.test(e.message)));
+  assert.ok(errorsFor(withOverrides({ features_grid: { desktop: { width: '1px' } } })).some((e) => /overrides/.test(e.path)));
+});
+
+test('overrides: a raw value equal to a token must use the token', () => {
+  const errors = errorsFor(withOverrides({ features_grid: { main: { 'padding-top': '2rem', color: '#1F4BFF' } } }));
+  assert.ok(errors.some((e) => /padding-top.*2rem.*\$space\.lg/.test(e.message)), JSON.stringify(errors));
+  assert.ok(errors.some((e) => /color.*#1F4BFF.*\$brand\.primary/.test(e.message)));
+});

@@ -45,9 +45,22 @@ Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml,
     - every `natives[]` entry exists inside its `targetClass` with `items.length` slides / tabs / dropdowns.
     - `query_styles` on every class of the section: no style with `isComboClass: true` and no properties. Names alone are not enough — an empty combo looks correct by name but renders nothing. An empty combo found → remove it from the element, put the properties on the element's own class (from `styles[]`), recheck once.
     Missing or empty → fix, reapply, recheck once.
-11. Record:
+11. **Visual loop (max 3 iterations).** The structure from the YAML is only a first pass; fidelity comes from comparing with Figma, as in QA, but while building.
+    1. Reference: Figma `get_screenshot` of the section `figmaNode` (once) and `get_design_context` for its CSS reference — for frames without auto layout that reference gives the real widths, offsets and overlaps.
+    2. Snapshot: `designer_tool` opens the page on the canvas, then `element_snapshot_tool` on the `section_<id>` element at 1440px. Designer not connected → ask the developer to open the Webflow Designer for this site with its tab in front, retry once; still not connected → skip the loop, record `--iterations 0 --pending "visual not verified: Designer not connected"`.
+    3. Compare with the `wf-qa-reviewer` agent (one at a time, never in parallel): diffs by severity.
+    4. No high or medium diffs → stop the loop.
+    5. Fix in the **spec**, never only in Webflow, so a rebuild reproduces it:
+       - Spacing, sizes, columns, alignment, positions → `overrides` on the section in `site-spec/pages/<page>.yaml`, own classes only (`section_<id>`, `<id>_*`), per breakpoint. A value equal to a token is written as `$<token>` (validate-spec rejects the raw value).
+       - Missing / extra / wrong element, wrong copy order → the section's `children`.
+       - Overlapping decorative layers → `decorative: true` + `position`.
+       Then `validate-spec`, re-run `plan-section` and apply only what changed: `update_style` for changed entries plus `remove_properties` for properties the plan no longer sets; rebuild the WHTML only when `children` changed (delete the section's elements first).
+    6. After every iteration: `validate-class-names` on the plan's classes, no empty combos (`query_styles`), no hard-coded token values (validate-spec covers overrides).
+    7. After the 3rd iteration, stop even if diffs remain: they go to `--pending`.
+    Do not use absolute positioning to match the screenshot except for `decorative` layers; prefer flex/grid overrides so tablet and mobile keep working.
+12. Record (re-run `plan-section` first: overrides change `specHash`):
     ```bash
-    node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status built --hash <specHash> --ids <comma-separated element ids> --page-id <pageId>
+    node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status built --hash <specHash> --ids <comma-separated element ids> --page-id <pageId> --iterations <n> --pending "<diff>;<diff>"
     ```
 
 On a failure that persists after one retry:

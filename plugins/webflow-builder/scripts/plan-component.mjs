@@ -14280,6 +14280,402 @@ var import_ajv = __toESM(require_ajv(), 1);
 import { existsSync as existsSync2 } from "node:fs";
 import { join as join2 } from "node:path";
 
+// src/lib/class-names.mjs
+var SEGMENT = "[a-z0-9]+(?:-[a-z0-9]+)*";
+var CUSTOM = new RegExp(`^${SEGMENT}_${SEGMENT}$`);
+var COMBO = new RegExp(`^is-${SEGMENT}$`);
+
+// src/lib/units.mjs
+function pxToRem(px) {
+  if (typeof px !== "number" || Number.isNaN(px)) {
+    throw new TypeError(`pxToRem expects a number, got ${JSON.stringify(px)}`);
+  }
+  return `${Number((px / 16).toFixed(4))}rem`;
+}
+
+// src/lib/responsive.mjs
+function resolveResponsive(value) {
+  if (typeof value === "number" || typeof value === "string") {
+    return { main: value, medium: value, small: value, tiny: value };
+  }
+  if (value && typeof value === "object" && "desktop" in value) {
+    const main = value.desktop;
+    const medium = value.tablet ?? main;
+    const small = value.mobileLandscape ?? value.mobile ?? medium;
+    const tiny = value.mobile ?? small;
+    return { main, medium, small, tiny };
+  }
+  throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
+}
+function changedBreakpoints(resolved) {
+  const out = [["main", resolved.main]];
+  if (resolved.medium !== resolved.main) out.push(["medium", resolved.medium]);
+  if (resolved.small !== resolved.medium) out.push(["small", resolved.small]);
+  if (resolved.tiny !== void 0 && resolved.tiny !== resolved.small) out.push(["tiny", resolved.tiny]);
+  return out;
+}
+
+// src/lib/variables.mjs
+function variableName(token) {
+  return token.replaceAll(".", "-");
+}
+function responsiveVariableNames(token, value, suffix = "") {
+  const resolved = resolveResponsive(value);
+  const base = variableName(token) + suffix;
+  const out = { main: { name: base, value: resolved.main } };
+  if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
+  const landscape = value && typeof value === "object" && value.mobileLandscape !== void 0;
+  if (resolved.small !== resolved.medium) out.small = { name: `${base}-${landscape ? "mobile-landscape" : "mobile"}`, value: resolved.small };
+  if (resolved.tiny !== resolved.small) out.tiny = { name: `${base}-mobile`, value: resolved.tiny };
+  return out;
+}
+
+// src/lib/components.mjs
+function primaryVariantName(component) {
+  if (!component?.variants?.length) return null;
+  return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
+}
+
+// src/lib/styles.mjs
+var SIDES = ["top", "right", "bottom", "left"];
+var CORNERS = ["top-left", "top-right", "bottom-right", "bottom-left"];
+function letterSpacingEm(type) {
+  const size = resolveResponsive(type.size).main;
+  return `${Number((type.letterSpacing / size).toFixed(4))}em`;
+}
+function typographyStyles(cls, type) {
+  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
+  if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
+  if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
+  return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
+    class: cls,
+    breakpoint: bp,
+    props: bp === "main" ? props : {},
+    variables: { "font-size": name }
+  }));
+}
+function surfaceStyles(cls, surface, spec) {
+  const props = {};
+  const vars = {};
+  if (surface.background) vars["background-color"] = variableName(surface.background);
+  if (surface.border) {
+    for (const side of SIDES) {
+      props[`border-${side}-width`] = `${surface.border.width}px`;
+      props[`border-${side}-style`] = "solid";
+      vars[`border-${side}-color`] = variableName(surface.border.color);
+    }
+  }
+  if (surface.radius !== void 0) {
+    for (const corner of CORNERS) props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
+    props.overflow = "hidden";
+  }
+  const padding = {};
+  for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
+    const token = surface.padding?.[axis];
+    if (!token) continue;
+    for (const [bp, { name }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
+      padding[bp] ??= {};
+      for (const side of sides) padding[bp][`padding-${side}`] = name;
+    }
+  }
+  const out = [{ class: cls, breakpoint: "main", props, variables: { ...vars, ...padding.main } }];
+  for (const [bp, variables] of Object.entries(padding)) {
+    if (bp !== "main") out.push({ class: cls, breakpoint: bp, props: {}, variables });
+  }
+  return out;
+}
+function mergeStyles(list, entries) {
+  for (const entry of entries) {
+    const existing = list.find((s) => s.class === entry.class && s.breakpoint === entry.breakpoint && s.comboOf === entry.comboOf);
+    if (existing) {
+      Object.assign(existing.props, entry.props);
+      Object.assign(existing.variables, entry.variables);
+    } else {
+      list.push({ ...entry, props: { ...entry.props }, variables: { ...entry.variables } });
+    }
+  }
+  return list;
+}
+
+// src/lib/plan-section.mjs
+var BREAKPOINTS = ["main", "medium", "small", "tiny"];
+function escapeHtml(text) {
+  return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+function layoutStyles(cls, layout, spec) {
+  const props = { main: {}, medium: {}, small: {}, tiny: {} };
+  const vars = { main: {}, medium: {}, small: {}, tiny: {} };
+  if (layout.type === "grid") {
+    props.main.display = "grid";
+    for (const [bp, n] of changedBreakpoints(resolveResponsive(layout.columns ?? 1))) {
+      props[bp]["grid-template-columns"] = `repeat(${n}, minmax(0, 1fr))`;
+    }
+  } else {
+    props.main.display = "flex";
+    props.main["flex-direction"] = layout.type === "stack" ? "column" : layout.direction ?? "row";
+    if (layout.align) props.main["align-items"] = layout.align;
+    if (layout.justify) props.main["justify-content"] = layout.justify;
+  }
+  if (layout.gap) {
+    for (const [bp, { name }] of Object.entries(responsiveVariableNames(layout.gap, spec.tokens.spacing[layout.gap]))) {
+      vars[bp]["grid-row-gap"] = name;
+      vars[bp]["grid-column-gap"] = name;
+    }
+  }
+  return BREAKPOINTS.filter((bp) => bp === "main" || Object.keys(props[bp]).length || Object.keys(vars[bp]).length).map((bp) => ({ class: cls, breakpoint: bp, props: props[bp], variables: vars[bp] }));
+}
+function nextOrder(ctx, cls) {
+  const n = (ctx.counts.get(cls) ?? 0) + 1;
+  ctx.counts.set(cls, n);
+  return n;
+}
+function imageClasses(ctx, ratio) {
+  if (!ctx.imageClasses.has(ratio)) {
+    const n = ctx.imageClasses.size;
+    const suffix = n === 0 ? "" : `-${n + 1}`;
+    const wrapper = `${ctx.section.id}_image-wrapper${suffix}`;
+    const image = `${ctx.section.id}_image${suffix}`;
+    ctx.custom.add(wrapper);
+    ctx.custom.add(image);
+    const wrapperProps = { width: "100%", overflow: "hidden" };
+    if (ratio) wrapperProps["aspect-ratio"] = ratio.replace("/", " / ");
+    ctx.plan.styles.push({ class: wrapper, breakpoint: "main", props: wrapperProps, variables: {} });
+    ctx.plan.styles.push({ class: image, breakpoint: "main", props: { width: "100%", height: "100%", "object-fit": "cover" }, variables: {} });
+    ctx.imageClasses.set(ratio, { wrapper, image });
+  }
+  return ctx.imageClasses.get(ratio);
+}
+function renderButton(child, ctx) {
+  ctx.utilities.add("button");
+  const classes = ["button"];
+  const primary = primaryVariantName(ctx.spec.components.components.find((c) => c.name === "button"));
+  if (child.variant && child.variant !== primary) {
+    classes.push(`is-${child.variant}`);
+    ctx.utilities.add(`is-${child.variant}`);
+  }
+  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}">${escapeHtml(child.text ?? "")}</a>`;
+}
+function addStyles(ctx, entries) {
+  mergeStyles(ctx.plan.styles, entries);
+}
+function textClass(utility, child, ctx) {
+  if (!child.color) {
+    ctx.utilities.add(utility);
+    return utility;
+  }
+  const type = ctx.spec.tokens.typography.find((t) => t.name === child.style);
+  const role = child.style.replace(".", "-");
+  const cls = `${ctx.section.id}_${role}-${variableName(child.color)}`;
+  if (!ctx.custom.has(cls)) {
+    ctx.custom.add(cls);
+    addStyles(ctx, [...typographyStyles(cls, type), { class: cls, breakpoint: "main", props: {}, variables: { color: variableName(child.color) } }]);
+  }
+  return cls;
+}
+function withTextAlign(cls, layout, ctx) {
+  if (layout?.textAlign) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { "text-align": layout.textAlign }, variables: {} }]);
+  return cls;
+}
+function withSurface(cls, surface, ctx) {
+  if (surface) addStyles(ctx, surfaceStyles(cls, ctx.spec.tokens.surfaces[surface], ctx.spec));
+  return cls;
+}
+function richTextHtml(text) {
+  return escapeHtml(text).replace(/\*\*(\S(?:.*?\S)?)\*\*/g, "<strong>$1</strong>").replace(/\*(\S(?:.*?\S)?)\*/g, "<em>$1</em>");
+}
+var renderAll = (children, ctx) => (children ?? []).map((c) => renderChild(c, ctx)).join("");
+function own(ctx, cls) {
+  ctx.custom.add(cls);
+  return cls;
+}
+function renderBehavior(child, cls, ctx) {
+  const b = child.behavior;
+  const box = (inner = "") => `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${inner}</div>`;
+  const native = (type, extra) => {
+    ctx.plan.natives.push({ type, targetClass: cls, order: nextOrder(ctx, cls), ...extra });
+    return box();
+  };
+  const pick = (keys) => Object.fromEntries(keys.filter((k) => b[k] !== void 0).map((k) => [k, b[k]]));
+  switch (b.type) {
+    case "slider": {
+      const slide = own(ctx, `${cls}-slide`);
+      const widths = changedBreakpoints(resolveResponsive(b.perView ?? 1)).map(([bp, n]) => ({ class: slide, breakpoint: bp, props: { width: `${Number((100 / n).toFixed(4))}%` }, variables: {} }));
+      addStyles(ctx, widths);
+      if (child.layout) addStyles(ctx, layoutStyles(slide, child.layout, ctx.spec));
+      return native("Slider", {
+        options: pick(["arrows", "dots", "autoplay", "interval", "loop"]),
+        classes: { slide },
+        items: child.children.map((c) => ({ whtml: renderChild(c, ctx) }))
+      });
+    }
+    case "tabs":
+      return native("Tabs", {
+        options: {},
+        classes: { menu: own(ctx, `${cls}-menu`), tab: own(ctx, `${cls}-tab`), pane: own(ctx, `${cls}-pane`) },
+        items: child.children.map((c, i) => ({ label: b.labels[i], whtml: renderChild(c, ctx) }))
+      });
+    case "accordion": {
+      const content = own(ctx, `${cls}-content`);
+      addStyles(ctx, [{ class: content, breakpoint: "main", props: { position: "static", display: "block" }, variables: {} }]);
+      return native("Dropdown", {
+        options: { mode: "accordion" },
+        classes: { item: own(ctx, `${cls}-item`), toggle: own(ctx, `${cls}-toggle`), content },
+        items: child.children.map((item) => ({
+          toggle: renderChild(item.children[0], ctx),
+          content: renderAll(item.children.slice(1), ctx)
+        }))
+      });
+    }
+    case "lightbox":
+      return native("Lightbox", { options: { url: b.url }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
+    case "video":
+      return native(/youtube\.com|youtu\.be/.test(b.url) ? "YouTubeVideo" : "Video", { options: { url: b.url }, classes: {}, items: [] });
+    case "modal":
+      return native("Modal", { options: { trigger: b.trigger }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
+    case "marquee": {
+      const track = own(ctx, `${cls}-track`);
+      addStyles(ctx, [
+        { class: cls, breakpoint: "main", props: { overflow: "hidden" }, variables: {} },
+        { class: track, breakpoint: "main", props: { display: "flex", width: "max-content" }, variables: {} }
+      ]);
+      if (child.layout?.gap) addStyles(ctx, layoutStyles(track, { type: "flex", gap: child.layout.gap }, ctx.spec));
+      const direction = b.direction ?? "left";
+      const speed = b.speed ?? 30;
+      ctx.plan.interactions.push({
+        type: "marquee",
+        targetClass: track,
+        direction,
+        speed,
+        note: `loop ${track} horizontally to the ${direction}, one full cycle every ${speed}s, moving ${direction === "left" ? "-50%" : "50%"} (content is duplicated)`
+      });
+      const inner = renderAll(child.children, ctx);
+      return box(`<div class="${track}">${inner}${inner}</div>`);
+    }
+    case "counter":
+      ctx.plan.interactions.push({ type: "counter", targetClass: cls, note: `count the numbers inside ${cls} up from 0 when it scrolls into view` });
+      return box(renderAll(child.children, ctx));
+    case "code":
+      ctx.plan.placeholders.push({ type: "code-component", targetClass: cls, order: nextOrder(ctx, cls), description: b.description ?? `code component for ${cls}` });
+      return box();
+    default:
+      throw new Error(`unsupported behavior "${b.type}"`);
+  }
+}
+function createContext(spec, section, plan) {
+  return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
+}
+function renderDecorative(child, ctx) {
+  const n = ctx.decorCount = (ctx.decorCount ?? 0) + 1;
+  const cls = own(ctx, `${ctx.section.id}_decor${n === 1 ? "" : `-${n}`}`);
+  const props = { position: "absolute", "pointer-events": "none", "z-index": "0" };
+  for (const [key, px] of Object.entries(child.position ?? {})) props[key] = pxToRem(px);
+  const styles = [{ class: cls, breakpoint: "main", props, variables: {} }];
+  if (!child.keepOnMobile) styles.push({ class: cls, breakpoint: "small", props: { display: "none" }, variables: {} });
+  addStyles(ctx, styles);
+  const { decorative, position, keepOnMobile, ...inner } = child;
+  return `<div class="${cls}" aria-hidden="true">${renderChild(inner, ctx)}</div>`;
+}
+function relativeIfDecorated(cls, children, ctx) {
+  if ((children ?? []).some((c) => c.decorative)) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { position: "relative" }, variables: {} }]);
+  return cls;
+}
+function renderChild(child, ctx) {
+  if (child.decorative) return renderDecorative(child, ctx);
+  const id = ctx.section.id;
+  switch (child.type) {
+    case "heading": {
+      const cls = textClass(`heading-style-${child.style.split(".")[1]}`, child, ctx);
+      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
+    }
+    case "text": {
+      const cls = textClass(`text-size-${child.style.split(".")[1]}`, child, ctx);
+      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
+    }
+    case "rich-text": {
+      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${richTextHtml(p.trim())}</p>`).join("");
+      let cls = "text-rich-text";
+      if (child.color) {
+        cls = `${id}_rich-text-${variableName(child.color)}`;
+        ctx.custom.add(cls);
+        addStyles(ctx, [{ class: cls, breakpoint: "main", props: {}, variables: { color: variableName(child.color) } }]);
+      } else {
+        ctx.utilities.add(cls);
+      }
+      return `<div class="${cls}">${paragraphs}</div>`;
+    }
+    case "image": {
+      const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
+      ctx.plan.assets.push({ id: child.asset, kind: "raster", alt: child.alt, targetClass: image, order: nextOrder(ctx, image) });
+      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"></div>`;
+    }
+    case "svg": {
+      const cls = `${id}_icon`;
+      ctx.custom.add(cls);
+      ctx.plan.assets.push({ id: child.asset, kind: "svg", alt: child.alt ?? "", targetClass: cls, order: nextOrder(ctx, cls) });
+      return `<div class="${cls}"></div>`;
+    }
+    case "link": {
+      const cls = `${id}_link`;
+      ctx.custom.add(cls);
+      return `<a class="${cls}" href="${escapeHtml(child.href)}">${escapeHtml(child.text)}</a>`;
+    }
+    case "button":
+      return renderButton(child, ctx);
+    case "list": {
+      const list = `${id}_list`;
+      const item = `${id}_list-item`;
+      ctx.custom.add(list);
+      ctx.custom.add(item);
+      return `<ul class="${list}">${child.items.map((t) => `<li class="${item}">${escapeHtml(t)}</li>`).join("")}</ul>`;
+    }
+    case "group": {
+      const cls = `${id}_${child.name}`;
+      ctx.custom.add(cls);
+      if (child.behavior) return renderBehavior(child, cls, ctx);
+      if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
+      relativeIfDecorated(cls, child.children, ctx);
+      return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
+    }
+    case "component": {
+      if (child.ref === "button") return renderButton(child, ctx);
+      const cls = `${id}_${child.ref}-slot`;
+      ctx.custom.add(cls);
+      const props = { ...child.props ?? {} };
+      if (child.text !== void 0) props.text = child.text;
+      if (child.href !== void 0) props.href = child.href;
+      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props, targetClass: cls, order: nextOrder(ctx, cls) });
+      return `<div class="${cls}"></div>`;
+    }
+    case "form":
+    case "embed-placeholder": {
+      const cls = `${id}_${child.type}`;
+      ctx.custom.add(cls);
+      ctx.plan.placeholders.push({ type: child.type, targetClass: cls, order: nextOrder(ctx, cls), description: child.description });
+      return `<div class="${cls}"></div>`;
+    }
+    default:
+      throw new Error(`unsupported child type "${child.type}"`);
+  }
+}
+
+// src/lib/qa-structural.mjs
+function tokenValueIndex(spec) {
+  const index = /* @__PURE__ */ new Map();
+  const put = (key, token) => {
+    if (!index.has(key)) index.set(key, token);
+  };
+  for (const color of spec.tokens.colors) put(color.value.toLowerCase(), color.name);
+  const addSize = (token, value) => {
+    for (const px of new Set(Object.values(resolveResponsive(value)))) {
+      put(pxToRem(px), token);
+      put(`${px}px`, token);
+    }
+  };
+  for (const [token, value] of Object.entries(spec.tokens.spacing)) addSize(token, value);
+  for (const type of spec.tokens.typography) addSize(type.name, type.size);
+  return index;
+}
+
 // plugins/build-core/skills/site-spec/schemas/common.schema.json
 var common_schema_default = {
   $schema: "http://json-schema.org/draft-07/schema#",
@@ -14770,6 +15166,35 @@ var page_schema_default = {
         },
         surface: {
           $ref: "common.schema.json#/definitions/kebab"
+        },
+        overrides: {
+          type: "object",
+          propertyNames: {
+            pattern: "^[a-z0-9]+(-[a-z0-9]+)*_[a-z0-9]+(-[a-z0-9]+)*$"
+          },
+          additionalProperties: {
+            type: "object",
+            minProperties: 1,
+            propertyNames: {
+              enum: [
+                "main",
+                "medium",
+                "small",
+                "tiny"
+              ]
+            },
+            additionalProperties: {
+              type: "object",
+              minProperties: 1,
+              propertyNames: {
+                pattern: "^[a-z]+(-[a-z]+)*$"
+              },
+              additionalProperties: {
+                type: "string",
+                minLength: 1
+              }
+            }
+          }
         }
       }
     },
@@ -15398,6 +15823,27 @@ function crossReferenceErrors(spec) {
     if (["video", "lightbox"].includes(behavior.type) && !behavior.url) err(file, `${path}/url`, `${behavior.type} needs the video url`);
     if (behavior.type === "modal" && !behavior.trigger) err(file, `${path}/trigger`, "modal needs the trigger button text");
   };
+  const tokenNames = /* @__PURE__ */ new Set([...colors, ...spacing]);
+  const valueIndex = tokenValueIndex(spec);
+  const checkOverrides = (file, section, path) => {
+    for (const [cls, breakpoints] of Object.entries(section.overrides ?? {})) {
+      if (cls !== `section_${section.id}` && !cls.startsWith(`${section.id}_`)) {
+        err(file, `${path}/${cls}`, `overrides may only target the section's own classes (section_${section.id}, ${section.id}_*)`);
+        continue;
+      }
+      for (const [bp, props] of Object.entries(breakpoints)) {
+        for (const [prop, value] of Object.entries(props)) {
+          const at = `${path}/${cls}/${bp}/${prop}`;
+          if (value.startsWith("$")) {
+            if (!tokenNames.has(value.slice(1))) err(file, at, `unknown token "${value.slice(1)}"`);
+            continue;
+          }
+          const token = valueIndex.get(value.trim().toLowerCase());
+          if (token) err(file, at, `${prop}: ${value} matches token "${token}"; write "$${token}" so it binds the variable`);
+        }
+      }
+    }
+  };
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
@@ -15459,6 +15905,7 @@ function crossReferenceErrors(spec) {
       checkLayout(file, section.layout, `${base}/layout`);
       const groupNames = /* @__PURE__ */ new Set();
       section.children.forEach((child, i) => checkChild(file, child, `${base}/children/${i}`, groupNames));
+      checkOverrides(file, section, `${base}/overrides`);
     });
   }
   return errors;
@@ -15483,379 +15930,6 @@ function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
   if (errors.length === 0) errors.push(...crossReferenceErrors(spec));
   if (requireResolvedQuestions) errors.push(...openQuestionErrors(spec.openQuestions));
   return { ok: errors.length === 0, errors };
-}
-
-// src/lib/responsive.mjs
-function resolveResponsive(value) {
-  if (typeof value === "number" || typeof value === "string") {
-    return { main: value, medium: value, small: value, tiny: value };
-  }
-  if (value && typeof value === "object" && "desktop" in value) {
-    const main = value.desktop;
-    const medium = value.tablet ?? main;
-    const small = value.mobileLandscape ?? value.mobile ?? medium;
-    const tiny = value.mobile ?? small;
-    return { main, medium, small, tiny };
-  }
-  throw new TypeError(`Invalid responsive value: ${JSON.stringify(value)}`);
-}
-function changedBreakpoints(resolved) {
-  const out = [["main", resolved.main]];
-  if (resolved.medium !== resolved.main) out.push(["medium", resolved.medium]);
-  if (resolved.small !== resolved.medium) out.push(["small", resolved.small]);
-  if (resolved.tiny !== void 0 && resolved.tiny !== resolved.small) out.push(["tiny", resolved.tiny]);
-  return out;
-}
-
-// src/lib/variables.mjs
-function variableName(token) {
-  return token.replaceAll(".", "-");
-}
-function responsiveVariableNames(token, value, suffix = "") {
-  const resolved = resolveResponsive(value);
-  const base = variableName(token) + suffix;
-  const out = { main: { name: base, value: resolved.main } };
-  if (resolved.medium !== resolved.main) out.medium = { name: `${base}-tablet`, value: resolved.medium };
-  const landscape = value && typeof value === "object" && value.mobileLandscape !== void 0;
-  if (resolved.small !== resolved.medium) out.small = { name: `${base}-${landscape ? "mobile-landscape" : "mobile"}`, value: resolved.small };
-  if (resolved.tiny !== resolved.small) out.tiny = { name: `${base}-mobile`, value: resolved.tiny };
-  return out;
-}
-
-// src/lib/components.mjs
-function primaryVariantName(component) {
-  if (!component?.variants?.length) return null;
-  return component.variants.some((v) => v.name === "primary") ? "primary" : component.variants[0].name;
-}
-
-// src/lib/units.mjs
-function pxToRem(px) {
-  if (typeof px !== "number" || Number.isNaN(px)) {
-    throw new TypeError(`pxToRem expects a number, got ${JSON.stringify(px)}`);
-  }
-  return `${Number((px / 16).toFixed(4))}rem`;
-}
-
-// src/lib/styles.mjs
-var SIDES = ["top", "right", "bottom", "left"];
-var CORNERS = ["top-left", "top-right", "bottom-right", "bottom-left"];
-function letterSpacingEm(type) {
-  const size = resolveResponsive(type.size).main;
-  return `${Number((type.letterSpacing / size).toFixed(4))}em`;
-}
-function typographyStyles(cls, type) {
-  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
-  if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
-  if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
-  return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
-    class: cls,
-    breakpoint: bp,
-    props: bp === "main" ? props : {},
-    variables: { "font-size": name }
-  }));
-}
-function surfaceStyles(cls, surface, spec) {
-  const props = {};
-  const vars = {};
-  if (surface.background) vars["background-color"] = variableName(surface.background);
-  if (surface.border) {
-    for (const side of SIDES) {
-      props[`border-${side}-width`] = `${surface.border.width}px`;
-      props[`border-${side}-style`] = "solid";
-      vars[`border-${side}-color`] = variableName(surface.border.color);
-    }
-  }
-  if (surface.radius !== void 0) {
-    for (const corner of CORNERS) props[`border-${corner}-radius`] = pxToRem(spec.tokens.radii[surface.radius]);
-    props.overflow = "hidden";
-  }
-  const padding = {};
-  for (const [axis, sides] of [["y", ["top", "bottom"]], ["x", ["left", "right"]]]) {
-    const token = surface.padding?.[axis];
-    if (!token) continue;
-    for (const [bp, { name }] of Object.entries(responsiveVariableNames(token, spec.tokens.spacing[token]))) {
-      padding[bp] ??= {};
-      for (const side of sides) padding[bp][`padding-${side}`] = name;
-    }
-  }
-  const out = [{ class: cls, breakpoint: "main", props, variables: { ...vars, ...padding.main } }];
-  for (const [bp, variables] of Object.entries(padding)) {
-    if (bp !== "main") out.push({ class: cls, breakpoint: bp, props: {}, variables });
-  }
-  return out;
-}
-function mergeStyles(list, entries) {
-  for (const entry of entries) {
-    const existing = list.find((s) => s.class === entry.class && s.breakpoint === entry.breakpoint && s.comboOf === entry.comboOf);
-    if (existing) {
-      Object.assign(existing.props, entry.props);
-      Object.assign(existing.variables, entry.variables);
-    } else {
-      list.push({ ...entry, props: { ...entry.props }, variables: { ...entry.variables } });
-    }
-  }
-  return list;
-}
-
-// src/lib/plan-section.mjs
-var BREAKPOINTS = ["main", "medium", "small", "tiny"];
-function escapeHtml(text) {
-  return String(text).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-}
-function layoutStyles(cls, layout, spec) {
-  const props = { main: {}, medium: {}, small: {}, tiny: {} };
-  const vars = { main: {}, medium: {}, small: {}, tiny: {} };
-  if (layout.type === "grid") {
-    props.main.display = "grid";
-    for (const [bp, n] of changedBreakpoints(resolveResponsive(layout.columns ?? 1))) {
-      props[bp]["grid-template-columns"] = `repeat(${n}, minmax(0, 1fr))`;
-    }
-  } else {
-    props.main.display = "flex";
-    props.main["flex-direction"] = layout.type === "stack" ? "column" : layout.direction ?? "row";
-    if (layout.align) props.main["align-items"] = layout.align;
-    if (layout.justify) props.main["justify-content"] = layout.justify;
-  }
-  if (layout.gap) {
-    for (const [bp, { name }] of Object.entries(responsiveVariableNames(layout.gap, spec.tokens.spacing[layout.gap]))) {
-      vars[bp]["grid-row-gap"] = name;
-      vars[bp]["grid-column-gap"] = name;
-    }
-  }
-  return BREAKPOINTS.filter((bp) => bp === "main" || Object.keys(props[bp]).length || Object.keys(vars[bp]).length).map((bp) => ({ class: cls, breakpoint: bp, props: props[bp], variables: vars[bp] }));
-}
-function nextOrder(ctx, cls) {
-  const n = (ctx.counts.get(cls) ?? 0) + 1;
-  ctx.counts.set(cls, n);
-  return n;
-}
-function imageClasses(ctx, ratio) {
-  if (!ctx.imageClasses.has(ratio)) {
-    const n = ctx.imageClasses.size;
-    const suffix = n === 0 ? "" : `-${n + 1}`;
-    const wrapper = `${ctx.section.id}_image-wrapper${suffix}`;
-    const image = `${ctx.section.id}_image${suffix}`;
-    ctx.custom.add(wrapper);
-    ctx.custom.add(image);
-    const wrapperProps = { width: "100%", overflow: "hidden" };
-    if (ratio) wrapperProps["aspect-ratio"] = ratio.replace("/", " / ");
-    ctx.plan.styles.push({ class: wrapper, breakpoint: "main", props: wrapperProps, variables: {} });
-    ctx.plan.styles.push({ class: image, breakpoint: "main", props: { width: "100%", height: "100%", "object-fit": "cover" }, variables: {} });
-    ctx.imageClasses.set(ratio, { wrapper, image });
-  }
-  return ctx.imageClasses.get(ratio);
-}
-function renderButton(child, ctx) {
-  ctx.utilities.add("button");
-  const classes = ["button"];
-  const primary = primaryVariantName(ctx.spec.components.components.find((c) => c.name === "button"));
-  if (child.variant && child.variant !== primary) {
-    classes.push(`is-${child.variant}`);
-    ctx.utilities.add(`is-${child.variant}`);
-  }
-  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}">${escapeHtml(child.text ?? "")}</a>`;
-}
-function addStyles(ctx, entries) {
-  mergeStyles(ctx.plan.styles, entries);
-}
-function textClass(utility, child, ctx) {
-  if (!child.color) {
-    ctx.utilities.add(utility);
-    return utility;
-  }
-  const type = ctx.spec.tokens.typography.find((t) => t.name === child.style);
-  const role = child.style.replace(".", "-");
-  const cls = `${ctx.section.id}_${role}-${variableName(child.color)}`;
-  if (!ctx.custom.has(cls)) {
-    ctx.custom.add(cls);
-    addStyles(ctx, [...typographyStyles(cls, type), { class: cls, breakpoint: "main", props: {}, variables: { color: variableName(child.color) } }]);
-  }
-  return cls;
-}
-function withTextAlign(cls, layout, ctx) {
-  if (layout?.textAlign) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { "text-align": layout.textAlign }, variables: {} }]);
-  return cls;
-}
-function withSurface(cls, surface, ctx) {
-  if (surface) addStyles(ctx, surfaceStyles(cls, ctx.spec.tokens.surfaces[surface], ctx.spec));
-  return cls;
-}
-function richTextHtml(text) {
-  return escapeHtml(text).replace(/\*\*(\S(?:.*?\S)?)\*\*/g, "<strong>$1</strong>").replace(/\*(\S(?:.*?\S)?)\*/g, "<em>$1</em>");
-}
-var renderAll = (children, ctx) => (children ?? []).map((c) => renderChild(c, ctx)).join("");
-function own(ctx, cls) {
-  ctx.custom.add(cls);
-  return cls;
-}
-function renderBehavior(child, cls, ctx) {
-  const b = child.behavior;
-  const box = (inner = "") => `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${inner}</div>`;
-  const native = (type, extra) => {
-    ctx.plan.natives.push({ type, targetClass: cls, order: nextOrder(ctx, cls), ...extra });
-    return box();
-  };
-  const pick = (keys) => Object.fromEntries(keys.filter((k) => b[k] !== void 0).map((k) => [k, b[k]]));
-  switch (b.type) {
-    case "slider": {
-      const slide = own(ctx, `${cls}-slide`);
-      const widths = changedBreakpoints(resolveResponsive(b.perView ?? 1)).map(([bp, n]) => ({ class: slide, breakpoint: bp, props: { width: `${Number((100 / n).toFixed(4))}%` }, variables: {} }));
-      addStyles(ctx, widths);
-      if (child.layout) addStyles(ctx, layoutStyles(slide, child.layout, ctx.spec));
-      return native("Slider", {
-        options: pick(["arrows", "dots", "autoplay", "interval", "loop"]),
-        classes: { slide },
-        items: child.children.map((c) => ({ whtml: renderChild(c, ctx) }))
-      });
-    }
-    case "tabs":
-      return native("Tabs", {
-        options: {},
-        classes: { menu: own(ctx, `${cls}-menu`), tab: own(ctx, `${cls}-tab`), pane: own(ctx, `${cls}-pane`) },
-        items: child.children.map((c, i) => ({ label: b.labels[i], whtml: renderChild(c, ctx) }))
-      });
-    case "accordion": {
-      const content = own(ctx, `${cls}-content`);
-      addStyles(ctx, [{ class: content, breakpoint: "main", props: { position: "static", display: "block" }, variables: {} }]);
-      return native("Dropdown", {
-        options: { mode: "accordion" },
-        classes: { item: own(ctx, `${cls}-item`), toggle: own(ctx, `${cls}-toggle`), content },
-        items: child.children.map((item) => ({
-          toggle: renderChild(item.children[0], ctx),
-          content: renderAll(item.children.slice(1), ctx)
-        }))
-      });
-    }
-    case "lightbox":
-      return native("Lightbox", { options: { url: b.url }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
-    case "video":
-      return native(/youtube\.com|youtu\.be/.test(b.url) ? "YouTubeVideo" : "Video", { options: { url: b.url }, classes: {}, items: [] });
-    case "modal":
-      return native("Modal", { options: { trigger: b.trigger }, classes: {}, items: [{ whtml: renderAll(child.children, ctx) }] });
-    case "marquee": {
-      const track = own(ctx, `${cls}-track`);
-      addStyles(ctx, [
-        { class: cls, breakpoint: "main", props: { overflow: "hidden" }, variables: {} },
-        { class: track, breakpoint: "main", props: { display: "flex", width: "max-content" }, variables: {} }
-      ]);
-      if (child.layout?.gap) addStyles(ctx, layoutStyles(track, { type: "flex", gap: child.layout.gap }, ctx.spec));
-      const direction = b.direction ?? "left";
-      const speed = b.speed ?? 30;
-      ctx.plan.interactions.push({
-        type: "marquee",
-        targetClass: track,
-        direction,
-        speed,
-        note: `loop ${track} horizontally to the ${direction}, one full cycle every ${speed}s, moving ${direction === "left" ? "-50%" : "50%"} (content is duplicated)`
-      });
-      const inner = renderAll(child.children, ctx);
-      return box(`<div class="${track}">${inner}${inner}</div>`);
-    }
-    case "counter":
-      ctx.plan.interactions.push({ type: "counter", targetClass: cls, note: `count the numbers inside ${cls} up from 0 when it scrolls into view` });
-      return box(renderAll(child.children, ctx));
-    case "code":
-      ctx.plan.placeholders.push({ type: "code-component", targetClass: cls, order: nextOrder(ctx, cls), description: b.description ?? `code component for ${cls}` });
-      return box();
-    default:
-      throw new Error(`unsupported behavior "${b.type}"`);
-  }
-}
-function createContext(spec, section, plan) {
-  return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
-}
-function renderDecorative(child, ctx) {
-  const n = ctx.decorCount = (ctx.decorCount ?? 0) + 1;
-  const cls = own(ctx, `${ctx.section.id}_decor${n === 1 ? "" : `-${n}`}`);
-  const props = { position: "absolute", "pointer-events": "none", "z-index": "0" };
-  for (const [key, px] of Object.entries(child.position ?? {})) props[key] = pxToRem(px);
-  const styles = [{ class: cls, breakpoint: "main", props, variables: {} }];
-  if (!child.keepOnMobile) styles.push({ class: cls, breakpoint: "small", props: { display: "none" }, variables: {} });
-  addStyles(ctx, styles);
-  const { decorative, position, keepOnMobile, ...inner } = child;
-  return `<div class="${cls}" aria-hidden="true">${renderChild(inner, ctx)}</div>`;
-}
-function relativeIfDecorated(cls, children, ctx) {
-  if ((children ?? []).some((c) => c.decorative)) addStyles(ctx, [{ class: cls, breakpoint: "main", props: { position: "relative" }, variables: {} }]);
-  return cls;
-}
-function renderChild(child, ctx) {
-  if (child.decorative) return renderDecorative(child, ctx);
-  const id = ctx.section.id;
-  switch (child.type) {
-    case "heading": {
-      const cls = textClass(`heading-style-${child.style.split(".")[1]}`, child, ctx);
-      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
-    }
-    case "text": {
-      const cls = textClass(`text-size-${child.style.split(".")[1]}`, child, ctx);
-      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
-    }
-    case "rich-text": {
-      const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${richTextHtml(p.trim())}</p>`).join("");
-      let cls = "text-rich-text";
-      if (child.color) {
-        cls = `${id}_rich-text-${variableName(child.color)}`;
-        ctx.custom.add(cls);
-        addStyles(ctx, [{ class: cls, breakpoint: "main", props: {}, variables: { color: variableName(child.color) } }]);
-      } else {
-        ctx.utilities.add(cls);
-      }
-      return `<div class="${cls}">${paragraphs}</div>`;
-    }
-    case "image": {
-      const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
-      ctx.plan.assets.push({ id: child.asset, kind: "raster", alt: child.alt, targetClass: image, order: nextOrder(ctx, image) });
-      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"></div>`;
-    }
-    case "svg": {
-      const cls = `${id}_icon`;
-      ctx.custom.add(cls);
-      ctx.plan.assets.push({ id: child.asset, kind: "svg", alt: child.alt ?? "", targetClass: cls, order: nextOrder(ctx, cls) });
-      return `<div class="${cls}"></div>`;
-    }
-    case "link": {
-      const cls = `${id}_link`;
-      ctx.custom.add(cls);
-      return `<a class="${cls}" href="${escapeHtml(child.href)}">${escapeHtml(child.text)}</a>`;
-    }
-    case "button":
-      return renderButton(child, ctx);
-    case "list": {
-      const list = `${id}_list`;
-      const item = `${id}_list-item`;
-      ctx.custom.add(list);
-      ctx.custom.add(item);
-      return `<ul class="${list}">${child.items.map((t) => `<li class="${item}">${escapeHtml(t)}</li>`).join("")}</ul>`;
-    }
-    case "group": {
-      const cls = `${id}_${child.name}`;
-      ctx.custom.add(cls);
-      if (child.behavior) return renderBehavior(child, cls, ctx);
-      if (child.layout) addStyles(ctx, layoutStyles(cls, child.layout, ctx.spec));
-      relativeIfDecorated(cls, child.children, ctx);
-      return `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${(child.children ?? []).map((c) => renderChild(c, ctx)).join("")}</div>`;
-    }
-    case "component": {
-      if (child.ref === "button") return renderButton(child, ctx);
-      const cls = `${id}_${child.ref}-slot`;
-      ctx.custom.add(cls);
-      const props = { ...child.props ?? {} };
-      if (child.text !== void 0) props.text = child.text;
-      if (child.href !== void 0) props.href = child.href;
-      ctx.plan.components.push({ ref: child.ref, variant: child.variant ?? null, props, targetClass: cls, order: nextOrder(ctx, cls) });
-      return `<div class="${cls}"></div>`;
-    }
-    case "form":
-    case "embed-placeholder": {
-      const cls = `${id}_${child.type}`;
-      ctx.custom.add(cls);
-      ctx.plan.placeholders.push({ type: child.type, targetClass: cls, order: nextOrder(ctx, cls), description: child.description });
-      return `<div class="${cls}"></div>`;
-    }
-    default:
-      throw new Error(`unsupported child type "${child.type}"`);
-  }
 }
 
 // src/lib/plan-component.mjs

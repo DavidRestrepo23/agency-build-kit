@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import AjvModule from 'ajv';
+import { tokenValueIndex } from './qa-structural.mjs';
 import commonSchema from '../../plugins/build-core/skills/site-spec/schemas/common.schema.json' with { type: 'json' };
 import projectSchema from '../../plugins/build-core/skills/site-spec/schemas/project.schema.json' with { type: 'json' };
 import tokensSchema from '../../plugins/build-core/skills/site-spec/schemas/tokens.schema.json' with { type: 'json' };
@@ -119,6 +120,28 @@ function crossReferenceErrors(spec) {
     if (behavior.type === 'modal' && !behavior.trigger) err(file, `${path}/trigger`, 'modal needs the trigger button text');
   };
 
+  const tokenNames = new Set([...colors, ...spacing]);
+  const valueIndex = tokenValueIndex(spec);
+  const checkOverrides = (file, section, path) => {
+    for (const [cls, breakpoints] of Object.entries(section.overrides ?? {})) {
+      if (cls !== `section_${section.id}` && !cls.startsWith(`${section.id}_`)) {
+        err(file, `${path}/${cls}`, `overrides may only target the section's own classes (section_${section.id}, ${section.id}_*)`);
+        continue;
+      }
+      for (const [bp, props] of Object.entries(breakpoints)) {
+        for (const [prop, value] of Object.entries(props)) {
+          const at = `${path}/${cls}/${bp}/${prop}`;
+          if (value.startsWith('$')) {
+            if (!tokenNames.has(value.slice(1))) err(file, at, `unknown token "${value.slice(1)}"`);
+            continue;
+          }
+          const token = valueIndex.get(value.trim().toLowerCase());
+          if (token) err(file, at, `${prop}: ${value} matches token "${token}"; write "$${token}" so it binds the variable`);
+        }
+      }
+    }
+  };
+
   const checkChild = (file, child, path, groupNames) => {
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
@@ -183,6 +206,7 @@ function crossReferenceErrors(spec) {
       checkLayout(file, section.layout, `${base}/layout`);
       const groupNames = new Set();
       section.children.forEach((child, i) => checkChild(file, child, `${base}/children/${i}`, groupNames));
+      checkOverrides(file, section, `${base}/overrides`);
     });
   }
   return errors;

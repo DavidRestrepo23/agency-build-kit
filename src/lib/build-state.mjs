@@ -5,7 +5,7 @@ export const SECTION_STATUSES = ['pending', 'built', 'failed', 'qa-pass', 'qa-fa
 const UP_TO_DATE = new Set(['built', 'qa-pass']);
 export const SETUP_STATUSES = ['pending', 'done', 'failed'];
 
-export function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId }) {
+export function setSectionState(state, { platform, page, section, status, specHash, elementIds, error, pageId, visual }) {
   if (!SECTION_STATUSES.includes(status)) throw new Error(`invalid status "${status}"`);
   const platformState = state[platform] ?? {};
   const pages = platformState.pages ?? {};
@@ -17,6 +17,7 @@ export function setSectionState(state, { platform, page, section, status, specHa
     specHash: specHash ?? previous.specHash ?? null,
     elementIds: elementIds ?? previous.elementIds ?? [],
     error: status === 'failed' ? (error ?? 'unknown error') : null,
+    ...(visual ? { visual } : {}),
     at: new Date().toISOString(),
   };
   return {
