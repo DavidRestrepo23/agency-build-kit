@@ -15,6 +15,15 @@ node "${CLAUDE_PLUGIN_ROOT}/scripts/plan-section.mjs" site-spec <page> <section>
 
 Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml, styles[], assets[], components[], interactions[], placeholders[], natives[] }`.
 
+## Designer session (required, every build)
+
+Always build with the Webflow Designer open for the site in Chrome, the MCP Bridge app connected and the target page on the canvas — never headless only.
+
+- Before step 1: `designer_tool get_current_page`. Not connected → ask the developer to open the Designer for this site (tab in front, Bridge app running) and stop until it answers; do not fall back to a headless build. Then `designer_tool switch_page` to the target `pageId` if another page (or a component canvas) is open, and confirm `get_current_mode` is `design`.
+- The Webflow MCP has no separate Designer-only builders: elements, styles, components, settings and interactions are written with the `data_*` tools, and with the Designer connected they apply to the open canvas. Designer tools are for navigation, selection, snapshots and `asset_tool upload_image_by_url`.
+- After each structural write (steps 4, 6, 7, 8b) `designer_tool select_element` on the section root (or the element just created) so the developer sees it, and after step 5 take a quick `element_snapshot_tool` of the section to catch broken layout before the visual loop.
+- If the Designer disconnects mid-build: stop, ask the developer to reconnect, and resume from the last completed step (the captured element ids tell you where).
+
 ## Steps
 
 1. Validate names:
@@ -47,7 +56,7 @@ Plan: `{ ok, page, section, specHash, classesToCreate[], utilitiesUsed[], whtml,
     Missing or empty → fix, reapply, recheck once.
 11. **Visual loop (max 3 iterations).** The structure from the YAML is only a first pass; fidelity comes from comparing with Figma, as in QA, but while building.
     1. Reference: Figma `get_screenshot` of the section `figmaNode` (once) and `get_design_context` for its CSS reference — for frames without auto layout that reference gives the real widths, offsets and overlaps.
-    2. Snapshot: `designer_tool` opens the page on the canvas, then `element_snapshot_tool` on the `section_<id>` element at 1440px. Designer not connected → ask the developer to open the Webflow Designer for this site with its tab in front, retry once; still not connected → skip the loop, record `--iterations 0 --pending "visual not verified: Designer not connected"`.
+    2. Snapshot: `designer_tool` opens the page on the canvas, then `element_snapshot_tool` on the `section_<id>` element at 1440px. Designer not connected → ask the developer to open the Webflow Designer for this site with its tab in front and wait for the answer, then retry; never skip the loop or record the section as built without it (see "Designer session").
     3. Compare with the `wf-qa-reviewer` agent (one at a time, never in parallel): diffs by severity.
     4. No high or medium diffs → stop the loop.
     5. Fix in the **spec**, never only in Webflow, so a rebuild reproduces it:

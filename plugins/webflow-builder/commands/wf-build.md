@@ -12,7 +12,7 @@ Arguments: $ARGUMENTS → `<page>` and optional `--section <id>` (one section) o
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-spec.mjs" site-spec --require-resolved
 ```
-Then read `site-spec/build-state.json`: `webflow.setup.status` must be `done`, otherwise tell the developer to run `/webflow-builder:wf-setup` and stop. Confirm the official `webflow-skills` plugin is installed (skill `webflow-mcp:figma-to-webflow` available), the Webflow MCP responds (`webflow_guide_tool`, `whoami`) and the Figma MCP is authenticated. The visual loop needs the **Webflow Designer open for this site in Chrome, tab in front** (`element_snapshot_tool`); ask the developer to open it before starting.
+Then read `site-spec/build-state.json`: `webflow.setup.status` must be `done`, otherwise tell the developer to run `/webflow-builder:wf-setup` and stop. Confirm the official `webflow-skills` plugin is installed (skill `webflow-mcp:figma-to-webflow` available), the Webflow MCP responds (`webflow_guide_tool`, `whoami`) and the Figma MCP is authenticated. Every build runs **through the Webflow Designer**: it must be open for this site in Chrome, tab in front, with the MCP Bridge app connected — not only for the visual loop. Check it with `designer_tool get_current_page` before building anything; if it is not connected, ask the developer to open it and stop until it is (see "Designer session" in `wf-section-build`).
 
 Ensure the page exists in Webflow (`data_pages_tool`; create it with slug `<page>` and the `page-wrapper` > `main-wrapper` structure if missing). Remember its `pageId`.
 
