@@ -28,7 +28,7 @@ test('typography variables are responsive and in rem', () => {
 
 test('heading utility binds font-size variables per breakpoint', () => {
   assert.deepEqual(setup.styles.filter((s) => s.class === 'heading-style-h1'), [
-    { class: 'heading-style-h1', breakpoint: 'main', props: { 'font-family': 'Inter', 'font-weight': '700', 'line-height': '1.1', 'letter-spacing': '-0.02em' }, variables: { 'font-size': 'heading-h1-size' } },
+    { class: 'heading-style-h1', breakpoint: 'main', props: { 'font-family': 'Inter', 'font-weight': '700', 'line-height': '1.1', 'margin-top': '0', 'margin-bottom': '0', 'letter-spacing': '-0.02em' }, variables: { 'font-size': 'heading-h1-size' } },
     { class: 'heading-style-h1', breakpoint: 'small', props: {}, variables: { 'font-size': 'heading-h1-size-mobile' } },
   ]);
 });
@@ -140,4 +140,12 @@ test('report: letterSpacing is px in the spec and becomes em relative to the des
 test('report: textTransform reaches the typography class', () => {
   const large = setup.styles.find((s) => s.class === 'text-size-large' && s.breakpoint === 'main');
   assert.equal(large.props['text-transform'], 'uppercase');
+});
+
+test('replicator: text utilities reset the default heading/paragraph margins', () => {
+  for (const cls of ['heading-style-h1', 'heading-style-h2', 'text-size-large', 'text-size-regular']) {
+    const main = setup.styles.find((s) => s.class === cls && s.breakpoint === 'main');
+    assert.equal(main.props['margin-top'], '0', cls);
+    assert.equal(main.props['margin-bottom'], '0', cls);
+  }
 });

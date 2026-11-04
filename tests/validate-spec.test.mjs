@@ -320,3 +320,11 @@ test('overrides: a raw value equal to a token must use the token', () => {
   assert.ok(errors.some((e) => /padding-top.*2rem.*\$space\.lg/.test(e.message)), JSON.stringify(errors));
   assert.ok(errors.some((e) => /color.*#1F4BFF.*\$brand\.primary/.test(e.message)));
 });
+
+test('replicator: overrides cannot fix a height in px/rem on content classes (use min-height)', () => {
+  const errors = errorsFor(withOverrides({ features_grid: { main: { height: '420px' } } }));
+  assert.ok(errors.some((e) => /height.*min-height/.test(e.message)), JSON.stringify(errors));
+  assert.deepEqual(errorsFor(withOverrides({ features_grid: { main: { 'min-height': '26.25rem', height: 'auto' } } })), []);
+  const dir = withOverrides({ features_decor: { main: { height: '120px' } } });
+  assert.ok(!errorsFor(dir).some((e) => /min-height/.test(e.message)), 'decorative wrappers may have a fixed height');
+});

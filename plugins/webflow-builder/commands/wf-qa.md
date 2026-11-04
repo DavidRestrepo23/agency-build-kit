@@ -12,7 +12,7 @@ Page: $ARGUMENTS
 1. With `query_elements` / `get_all_elements` on the page and `query_styles`, build a dump and save it to `site-spec/qa/<page>.dump.json`:
    ```json
    {
-     "sections": [{ "id": "<section id from section_<id> class>", "classes": [], "headings": [1, 2], "images": [{ "alt": "" }], "links": [{ "href": "" }], "natives": [{ "type": "Slider", "targetClass": "<class of the div that contains it>", "items": 3 }] }],
+     "sections": [{ "id": "<section id from section_<id> class>", "classes": [], "headings": [1, 2], "images": [{ "alt": "" }], "links": [{ "href": "" }], "texts": ["<every visible text in DOM order>"], "natives": [{ "type": "Slider", "targetClass": "<class of the div that contains it>", "items": 3 }] }],
      "styles": [{ "name": "<class or 'base combo' for combos>", "breakpoint": "main", "isComboClass": false, "props": { "<css-prop>": "<raw value, not variable>" }, "variables": { "<css-prop>": "<variable>" } }]
    }
    ```

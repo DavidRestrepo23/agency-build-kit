@@ -30,6 +30,18 @@ test('build-core infer-layout runs without node_modules', () => {
   assert.equal(JSON.parse(run.stdout).frames[0].layout.gap, 'space.lg');
 });
 
+test('webflow-builder compare-values and asset-upload are bundled', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'cmp-'));
+  const styles = join(dir, 'styles.json');
+  writeFileSync(styles, '[]');
+  const cmp = runIsolated('webflow-builder', 'compare-values.mjs', [VALID_SPEC, '--plan', 'home', 'hero', styles]);
+  assert.equal(cmp.status, 1, cmp.stderr);
+  assert.ok(JSON.parse(cmp.stdout).diffs.length > 0);
+  const md5 = runIsolated('webflow-builder', 'asset-upload.mjs', ['md5', styles]);
+  assert.equal(md5.status, 0, md5.stderr);
+  assert.equal(JSON.parse(md5.stdout).size, 2);
+});
+
 test('build-core validate-spec runs without node_modules', () => {
   const run = runIsolated('build-core', 'validate-spec.mjs', [VALID_SPEC]);
   assert.equal(run.status, 0, run.stderr);

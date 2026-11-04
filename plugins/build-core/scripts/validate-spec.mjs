@@ -15488,6 +15488,10 @@ function crossReferenceErrors(spec) {
             if (!tokenNames.has(value.slice(1))) err(file, at, `unknown token "${value.slice(1)}"`);
             continue;
           }
+          if (prop === "height" && /^-?[\d.]+(px|rem|em)$/.test(value.trim()) && !/_decor(-\d+)?$/.test(cls)) {
+            err(file, at, `height: ${value} fixes the box height and cuts content when it grows; use min-height (decorative wrappers excepted)`);
+            continue;
+          }
           const token = valueIndex.get(value.trim().toLowerCase());
           if (token) err(file, at, `${prop}: ${value} matches token "${token}"; write "$${token}" so it binds the variable`);
         }

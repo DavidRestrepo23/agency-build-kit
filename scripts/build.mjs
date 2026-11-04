@@ -9,6 +9,8 @@ const TARGETS = [
   ['src/cli/plan-component.mjs', ['plugins/webflow-builder/scripts/plan-component.mjs']],
   ['src/cli/qa-structural.mjs', ['plugins/webflow-builder/scripts/qa-structural.mjs']],
   ['src/cli/build-state.mjs', ['plugins/webflow-builder/scripts/build-state.mjs']],
+  ['src/cli/compare-values.mjs', ['plugins/webflow-builder/scripts/compare-values.mjs']],
+  ['src/cli/asset-upload.mjs', ['plugins/webflow-builder/scripts/asset-upload.mjs']],
 ];
 
 for (const [entry, outfiles] of TARGETS) {

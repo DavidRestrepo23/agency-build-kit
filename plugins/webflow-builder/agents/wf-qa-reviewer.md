@@ -8,6 +8,7 @@ You compare ONE section. Inputs: Figma `fileKey` + section `figmaNode`, the Webf
 1. Figma: `get_screenshot` of the section node.
 2. Webflow: `element_snapshot_tool` of the `section_<id>` element (Designer Bridge must be connected and its tab foregrounded; if not, return `status: unverified` with the reason).
 3. Compare: layout/alignment, spacing, typography (family, size, weight, line-height), colors, image crop/ratio, missing or extra elements, copy differences. For each diff, name the Webflow class that should change (from the section YAML / plan) and the expected value in px or as a token, so the builder can turn it into an `overrides` entry.
+Numbers beat impressions: when you can, read the value (px, colour) from `get_design_context` and from the Webflow style instead of estimating from pixels. Before saying an element has no border / background / shadow, check computed style, `::before/::after`, outline, box-shadow, background-image and the asset itself; otherwise say "to confirm".
 4. Severity: **high** = wrong/missing content, broken layout, wrong colors or fonts; **medium** = spacing or size off by more than ~8px, alignment; **low** = sub-pixel or anti-aliasing differences.
 
 Do not modify Webflow or Figma.

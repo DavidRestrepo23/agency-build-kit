@@ -132,3 +132,32 @@ test('behavior: missing native element or wrong item count is high severity', ()
   dump.sections[1].natives[0].items = 2;
   assert.deepEqual(findings(dump), []);
 });
+
+test('replicator: placeholder or missing copy is high severity when texts are dumped', () => {
+  const dump = goodDump();
+  dump.sections[0].texts = ['Grow faster & smarter', 'This is some text inside of a div block', 'Book a demo'];
+  const findings = checkStructure(spec, 'home', dump).findings.filter((f) => f.section === 'hero');
+  assert.ok(findings.some((f) => f.severity === 'high' && /placeholder/.test(f.message)), JSON.stringify(findings));
+  assert.ok(findings.some((f) => f.severity === 'high' && /"Built for <teams> that ship\." not found/.test(f.message)));
+  dump.sections[0].texts = ['Grow faster  &  smarter', 'Built for <teams> that ship.', 'Book a demo'];
+  assert.deepEqual(checkStructure(spec, 'home', dump).findings.filter((f) => f.section === 'hero'), []);
+});
+
+test('replicator: absolute content, fixed px boxes, hidden elements and # links are listed', () => {
+  const dump = goodDump();
+  dump.styles.push(
+    { name: 'features_grid', breakpoint: 'main', props: { position: 'absolute', width: '640px', height: '420px' } },
+    { name: 'hero_decor', breakpoint: 'main', props: { position: 'absolute', width: '566px' } },
+    { name: 'hero_image-wrapper', breakpoint: 'main', props: { display: 'none' } },
+    { name: 'features_grid', breakpoint: 'main', props: { 'border-top-width': '2px' } },
+  );
+  dump.sections[0].links = [{ href: '#' }, { href: '#contact' }];
+  const messages = checkStructure(spec, 'home', dump).findings.map((f) => `${f.severity}|${f.section}|${f.message}`);
+  assert.ok(messages.some((m) => /^medium\|features\|.*features_grid.*position: absolute/.test(m)), messages.join('\n'));
+  assert.ok(messages.some((m) => /^medium\|features\|.*features_grid.*width: 640px/.test(m)));
+  assert.ok(messages.some((m) => /^medium\|features\|.*features_grid.*height: 420px/.test(m)));
+  assert.ok(!messages.some((m) => /hero_decor/.test(m)), 'decorative wrappers are allowed');
+  assert.ok(messages.some((m) => /^medium\|hero\|.*hero_image-wrapper.*hidden/.test(m)));
+  assert.ok(messages.some((m) => /^low\|hero\|.*link to "#"/.test(m)));
+  assert.ok(!messages.some((m) => /border-top-width/.test(m)));
+});

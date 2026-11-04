@@ -13,7 +13,8 @@ export function letterSpacingEm(type) {
 
 // Styles of a typography token on any class: static props on main, font-size variable per breakpoint.
 export function typographyStyles(cls, type) {
-  const props = { 'font-family': type.family, 'font-weight': String(type.weight), 'line-height': String(type.lineHeight) };
+  // Headings and paragraphs carry browser default margins in Webflow; spacing comes from layout gaps instead.
+  const props = { 'font-family': type.family, 'font-weight': String(type.weight), 'line-height': String(type.lineHeight), 'margin-top': '0', 'margin-bottom': '0' };
   if (type.letterSpacing !== undefined) props['letter-spacing'] = letterSpacingEm(type);
   if (type.textTransform !== undefined) props['text-transform'] = type.textTransform;
   return Object.entries(responsiveVariableNames(type.name, type.size, '-size')).map(([bp, { name }]) => ({

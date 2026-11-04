@@ -14344,7 +14344,7 @@ function letterSpacingEm(type) {
   return `${Number((type.letterSpacing / size).toFixed(4))}em`;
 }
 function typographyStyles(cls, type) {
-  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight) };
+  const props = { "font-family": type.family, "font-weight": String(type.weight), "line-height": String(type.lineHeight), "margin-top": "0", "margin-bottom": "0" };
   if (type.letterSpacing !== void 0) props["letter-spacing"] = letterSpacingEm(type);
   if (type.textTransform !== void 0) props["text-transform"] = type.textTransform;
   return Object.entries(responsiveVariableNames(type.name, type.size, "-size")).map(([bp, { name }]) => ({
@@ -15836,6 +15836,10 @@ function crossReferenceErrors(spec) {
           const at = `${path}/${cls}/${bp}/${prop}`;
           if (value.startsWith("$")) {
             if (!tokenNames.has(value.slice(1))) err(file, at, `unknown token "${value.slice(1)}"`);
+            continue;
+          }
+          if (prop === "height" && /^-?[\d.]+(px|rem|em)$/.test(value.trim()) && !/_decor(-\d+)?$/.test(cls)) {
+            err(file, at, `height: ${value} fixes the box height and cuts content when it grows; use min-height (decorative wrappers excepted)`);
             continue;
           }
           const token = valueIndex.get(value.trim().toLowerCase());

@@ -25,6 +25,27 @@ function sectionOfClass(name, page) {
   return page.sections.some((s) => s.id === id) ? id : null;
 }
 
+const PLACEHOLDER = /this is some text inside of a div block|lorem ipsum|^heading$|^text block$/i;
+const norm = (t) => String(t).replace(/\*\*|\*/g, '').replace(/\s+/g, ' ').trim();
+const DECOR = /_decor(-\d+)?$/;
+const FIXED_PX = /^-?\d+(\.\d+)?px$/;
+
+// Every piece of copy the spec puts on the page for a section.
+export function specTexts(section) {
+  const out = [];
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'rich-text') out.push(...String(node.text).split(/\n\s*\n/));
+    else if (['heading', 'text', 'link', 'button', 'component'].includes(node.type) && node.text) out.push(node.text);
+    if (node.type === 'list') out.push(...node.items);
+    if (node.behavior?.labels) out.push(...node.behavior.labels);
+    if (node.behavior?.trigger) out.push(node.behavior.trigger);
+    for (const child of node.children ?? []) visit(child);
+  };
+  for (const child of section.children ?? []) visit(child);
+  return out.map(norm).filter(Boolean);
+}
+
 export function checkStructure(spec, pageSlug, dump) {
   const page = spec.pages[pageSlug];
   if (!page) throw new Error(`unknown page "${pageSlug}"`);
@@ -62,7 +83,18 @@ export function checkStructure(spec, pageSlug, dump) {
     }
     for (const level of section.headings ?? []) headings.push({ level, section: section.id });
     for (const image of section.images ?? []) if (!String(image.alt ?? '').trim()) add('medium', 'image without alt text', section.id);
-    for (const link of section.links ?? []) if (!String(link.href ?? '').trim()) add('medium', 'link without href', section.id);
+    for (const link of section.links ?? []) {
+      const href = String(link.href ?? '').trim();
+      if (!href) add('medium', 'link without href', section.id);
+      else if (href === '#') add('low', 'link to "#": destination pending — list it for the developer', section.id);
+    }
+    const specSection = page.sections.find((s) => s.id === section.id);
+    if (specSection && Array.isArray(section.texts)) {
+      const built = section.texts.map(norm);
+      for (const t of built) if (PLACEHOLDER.test(t)) add('high', `placeholder text "${t}" left in Webflow (set_text did not apply; read text back)`, section.id);
+      const joined = ` ${built.join(' | ')} `;
+      for (const t of specTexts(specSection)) if (!joined.includes(t)) add('high', `copy "${t}" not found in Webflow (missing or rewritten)`, section.id);
+    }
   }
 
   const h1Count = headings.filter((h) => h.level === 1).length;
@@ -78,6 +110,20 @@ export function checkStructure(spec, pageSlug, dump) {
     if (style.isComboClass && !Object.keys(style.props ?? {}).length && !Object.keys(style.variables ?? {}).length) {
       add('high', `empty combo class "${style.name}" (${style.breakpoint ?? 'main'}): stacked classes have no effect; put the props on the element's own class`, sectionOfClass(style.name.split(/[\s.]+/)[0], page));
     }
+  }
+
+  // Structure audit: content must flow (flex/grid), boxes must not be fixed in px, nothing left hidden.
+  for (const style of dump.styles ?? []) {
+    const name = style.name ?? '';
+    if (!name.includes('_') || DECOR.test(name.split(/[\s.]+/)[0])) continue;
+    const where = sectionOfClass(name.split(/[\s.]+/)[0], page);
+    const bp = style.breakpoint ?? 'main';
+    const props = style.props ?? {};
+    if (props.position === 'absolute' || props.position === 'fixed') add('medium', `${name} (${bp}) position: ${props.position} on a content class; use flex/grid, or mark the layer decorative`, where);
+    for (const prop of ['width', 'height']) {
+      if (FIXED_PX.test(String(props[prop] ?? '').trim())) add('medium', `${name} (${bp}) ${prop}: ${props[prop]} is a fixed px box; use %, fr, max-width or min-height`, where);
+    }
+    if (bp === 'main' && props.display === 'none') add('medium', `${name} hidden on desktop (display: none): remove it or list it for the developer to delete`, where);
   }
 
   const index = tokenValueIndex(spec);
