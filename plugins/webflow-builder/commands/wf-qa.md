@@ -30,6 +30,8 @@ Each section was already compared during `/webflow-builder:wf-build` (build-stat
 
 Run one `wf-qa-reviewer` agent per built section **one at a time** — wait for each to finish before starting the next. Parallel reviewers overload the Designer Bridge (seen: 14 in parallel → only 3 visual comparisons completed). Keep the Designer connected and its tab in the foreground; if the bridge drops, reconnect and resume from the first section without a visual result. Tablet/mobile: ask the developer whether to publish to the `.webflow.io` staging subdomain; only on an explicit yes use the official `safe-publish` flow for staging, then capture 1440/768/375 px screenshots with the browser. Otherwise mark tablet/mobile as **unverified**.
 
+On a published staging page, native IX3 interactions do not use `data-w-id`: the `<html>` gets `w-mod-ix3` and the targets keep their `data-anim` attributes — check for those instead.
+
 ## 3. Accessibility
 
 Run the official `accessibility-audit` skill on the page.

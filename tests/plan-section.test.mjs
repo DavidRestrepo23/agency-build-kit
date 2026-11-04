@@ -295,10 +295,10 @@ test('behavior video, lightbox and modal', () => {
 
 test('behavior marquee: duplicated track and an interaction', () => {
   const plan = planWith({ type: 'marquee', direction: 'left', speed: 20 });
-  assert.ok(plan.whtml.includes('<div class="features_carousel"><div class="features_carousel-track">'), plan.whtml);
+  assert.ok(plan.whtml.includes('<div class="features_carousel"><div class="features_carousel-track" data-anim="marquee">'), plan.whtml);
   assert.equal((plan.whtml.match(/>One</g) ?? []).length, 2, 'content duplicated for a seamless loop');
   assert.deepEqual(plan.interactions.find((i) => i.type === 'marquee'), {
-    type: 'marquee', targetClass: 'features_carousel-track', direction: 'left', speed: 20,
+    type: 'marquee', targetClass: 'features_carousel-track', selector: '[data-anim="marquee"]', direction: 'left', speed: 20,
     note: 'loop features_carousel-track horizontally to the left, one full cycle every 20s, moving -50% (content is duplicated)',
   });
   assert.equal(plan.natives.length, 0);
@@ -307,6 +307,8 @@ test('behavior marquee: duplicated track and an interaction', () => {
 test('behavior counter and code', () => {
   const counter = planWith({ type: 'counter' });
   assert.equal(counter.interactions.find((i) => i.type === 'counter').targetClass, 'features_carousel');
+  assert.equal(counter.interactions.find((i) => i.type === 'counter').selector, '[data-anim="counter"]');
+  assert.ok(counter.whtml.includes('<div class="features_carousel" data-anim="counter">'), counter.whtml);
   const code = planWith({ type: 'code', description: 'ROI calculator' });
   assert.ok(code.placeholders.some((p) => p.type === 'code-component' && p.targetClass === 'features_carousel' && p.description === 'ROI calculator'));
   assert.ok(code.whtml.includes('<div class="features_carousel"></div>'));

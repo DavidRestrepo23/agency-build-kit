@@ -21,7 +21,16 @@ Shape: `{ ok, variables[], fonts[], styles[], classes[], components[] }` (`style
 
 1. `webflow_guide_tool` once; `whoami` + `get_site` → record `siteId`.
 2. **Variables:** create collections `Colors`, `Typography`, `Spacing` and every entry of `variables[]` (`type: color` → color variable, `type: size` → size variable in rem). Use the variable tool named by `webflow_guide_tool`. Skip variables that already exist with the same value; if one exists with a different value, stop and report.
-3. **Fonts:** the MCP only manages **uploaded** font files. For `source: upload` entries use `data_fonts_tool` with the files. For `source: google` (and Adobe) the MCP cannot add them: ask the developer to add each family and its weights in **Site settings → Fonts** (Google Fonts) and wait for confirmation, then continue. Never add `<link>` tags to head.
+3. **Fonts:** the MCP only manages **uploaded** font files, so every font is uploaded as a file:
+   - `source: google`: download the family (woff2, latin; Google Fonts are SIL Open Font License):
+     ```bash
+     node "${CLAUDE_PLUGIN_ROOT}/scripts/fetch-google-font.mjs" "<family>" <weights,comma-separated> site-spec/fonts
+     ```
+     A `variable: true` file covers all its weights — upload it once.
+   - `source: upload`: the files listed in `files` (confirm the licence with the developer).
+   - Upload each file: `node "${CLAUDE_PLUGIN_ROOT}/scripts/asset-upload.mjs" md5 <file>` → `data_fonts_tool create_font` (name + md5) → `asset-upload.mjs upload <file> <response.json>` right away (signed URL expires).
+   - Adobe Fonts cannot be uploaded: ask the developer to add them in Site settings → Fonts.
+   If the Designer is open while fonts upload, it keeps showing a serif fallback until it is reloaded — that is not a data error; ask the developer to reload the Designer before judging typography. Never add `<link>` tags to head.
 4. **Classes:** for every name in `classes[]` call `data_style_tool create_style` (combos from entries with `comboOf` are created as combo classes on their base). Then verify with `query_styles` that all exist.
 5. **Styles:** for each `styles[]` entry call `data_style_tool update_style` on its breakpoint (`main`, `medium`, `small`, `tiny`) with `props` as native longhand properties and each `variables` entry bound with `variable_as_value`. Never use WHTML `css` or embed `<style>`.
 6. **Style guide page:** create page `style-guide` (`data_pages_tool`) and build sections with `data_whtml_builder` showing every color (background-color utility swatches), every `heading-style-*` / `text-size-*` sample, spacing samples and every button variant.

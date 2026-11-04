@@ -14533,7 +14533,7 @@ function own(ctx, cls) {
 }
 function renderBehavior(child, cls, ctx) {
   const b = child.behavior;
-  const box = (inner = "") => `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}">${inner}</div>`;
+  const box = (inner = "", attrs = "") => `<div class="${withTextAlign(withSurface(cls, child.surface, ctx), child.layout, ctx)}"${attrs}>${inner}</div>`;
   const native = (type, extra) => {
     ctx.plan.natives.push({ type, targetClass: cls, order: nextOrder(ctx, cls), ...extra });
     return box();
@@ -14587,16 +14587,17 @@ function renderBehavior(child, cls, ctx) {
       ctx.plan.interactions.push({
         type: "marquee",
         targetClass: track,
+        selector: '[data-anim="marquee"]',
         direction,
         speed,
         note: `loop ${track} horizontally to the ${direction}, one full cycle every ${speed}s, moving ${direction === "left" ? "-50%" : "50%"} (content is duplicated)`
       });
       const inner = renderAll(child.children, ctx);
-      return box(`<div class="${track}">${inner}${inner}</div>`);
+      return box(`<div class="${track}" data-anim="marquee">${inner}${inner}</div>`);
     }
     case "counter":
-      ctx.plan.interactions.push({ type: "counter", targetClass: cls, note: `count the numbers inside ${cls} up from 0 when it scrolls into view` });
-      return box(renderAll(child.children, ctx));
+      ctx.plan.interactions.push({ type: "counter", targetClass: cls, selector: '[data-anim="counter"]', note: `count the numbers inside ${cls} up from 0 when it scrolls into view` });
+      return box(renderAll(child.children, ctx), ' data-anim="counter"');
     case "code":
       ctx.plan.placeholders.push({ type: "code-component", targetClass: cls, order: nextOrder(ctx, cls), description: b.description ?? `code component for ${cls}` });
       return box();

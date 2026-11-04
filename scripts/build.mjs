@@ -11,6 +11,7 @@ const TARGETS = [
   ['src/cli/build-state.mjs', ['plugins/webflow-builder/scripts/build-state.mjs']],
   ['src/cli/compare-values.mjs', ['plugins/webflow-builder/scripts/compare-values.mjs']],
   ['src/cli/asset-upload.mjs', ['plugins/webflow-builder/scripts/asset-upload.mjs']],
+  ['src/cli/fetch-google-font.mjs', ['plugins/webflow-builder/scripts/fetch-google-font.mjs']],
 ];
 
 for (const [entry, outfiles] of TARGETS) {
