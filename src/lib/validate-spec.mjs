@@ -1,7 +1,8 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import AjvModule from 'ajv';
 import { tokenValueIndex } from './qa-structural.mjs';
+import { pngAlpha, svgIssues } from './asset-checks.mjs';
 import commonSchema from '../../plugins/build-core/skills/site-spec/schemas/common.schema.json' with { type: 'json' };
 import projectSchema from '../../plugins/build-core/skills/site-spec/schemas/project.schema.json' with { type: 'json' };
 import tokensSchema from '../../plugins/build-core/skills/site-spec/schemas/tokens.schema.json' with { type: 'json' };
@@ -34,7 +35,7 @@ function schemaErrors(file, validate, data) {
   return validate.errors.map((e) => ({ file, path: e.instancePath || '/', message: e.message }));
 }
 
-function crossReferenceErrors(spec) {
+function crossReferenceErrors(spec, warnings = []) {
   const errors = [];
   const err = (file, path, message) => errors.push({ file, path, message });
   const colors = new Set(spec.tokens.colors.map((c) => c.name));
@@ -82,8 +83,21 @@ function crossReferenceErrors(spec) {
     if (asset.kind === 'raster' && (asset.scale ?? 1) < 2 && !asset.scaleApproved) {
       err('assets/manifest.yaml', `/assets/${i}`, `raster asset "${asset.id}" must be exported at scale 2 or higher`);
     }
-    if (spec.dir && !existsSync(join(spec.dir, 'assets', asset.file))) {
+    const path = spec.dir && join(spec.dir, 'assets', asset.file);
+    if (path && !existsSync(path)) {
       err('assets/manifest.yaml', `/assets/${i}/file`, `asset file "${asset.file}" not found in assets/`);
+    } else if (path) {
+      const at = `/assets/${i}/file`;
+      const kb = Math.round(statSync(path).size / 1024);
+      if (kb > 500) warnings.push({ file: 'assets/manifest.yaml', path: at, message: `${asset.file} is ${kb}KB (over ~500KB): propose WebP/compression to the developer` });
+      if (asset.file.toLowerCase().endsWith('.svg')) {
+        for (const issue of svgIssues(readFileSync(path, 'utf8'))) err('assets/manifest.yaml', at, `${asset.file} ${issue}`);
+      }
+      if (asset.transparent) {
+        const png = asset.file.toLowerCase().endsWith('.png') ? pngAlpha(readFileSync(path)) : null;
+        if (!png || !png.hasAlpha) err('assets/manifest.yaml', at, `${asset.file} is marked transparent but has no alpha channel (export it as a transparent PNG)`);
+        else if (png.corners && png.corners.some((a) => a !== 0)) err('assets/manifest.yaml', at, `${asset.file} is marked transparent but its corners are opaque (alpha ${png.corners.join('/')}): the export was flattened`);
+      }
     }
   });
 
@@ -234,7 +248,8 @@ export function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
   for (const [slug, page] of Object.entries(spec.pages)) {
     errors.push(...schemaErrors(`pages/${slug}.yaml`, validators.page, page));
   }
-  if (errors.length === 0) errors.push(...crossReferenceErrors(spec));
+  const warnings = [];
+  if (errors.length === 0) errors.push(...crossReferenceErrors(spec, warnings));
   if (requireResolvedQuestions) errors.push(...openQuestionErrors(spec.openQuestions));
-  return { ok: errors.length === 0, errors };
+  return { ok: errors.length === 0, errors, warnings };
 }

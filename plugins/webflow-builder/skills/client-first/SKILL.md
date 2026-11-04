@@ -28,6 +28,7 @@ Utilities: `page-wrapper`, `main-wrapper`, `padding-global`, `container-*`, `pad
 | section `id` | `section_<id>` + wrappers above |
 | `spacing: section.large` | `padding-section-large` |
 | `container: large` | `container-large` |
+| `container: full` | no container wrapper: content fills the screen minus `padding-global` |
 | `heading.hN` | `heading-style-hN` on the semantic `<hN>` |
 | `text.<size>` | `text-size-<size>` |
 | `group` `name` | `<id>_<name>` |

@@ -14277,7 +14277,7 @@ function loadSpec(dir) {
 
 // src/lib/validate-spec.mjs
 var import_ajv = __toESM(require_ajv(), 1);
-import { existsSync as existsSync2 } from "node:fs";
+import { existsSync as existsSync2, readFileSync as readFileSync2, statSync } from "node:fs";
 import { join as join2 } from "node:path";
 
 // src/lib/class-names.mjs
@@ -14324,6 +14324,51 @@ function tokenValueIndex(spec) {
   for (const [token, value] of Object.entries(spec.tokens.spacing)) addSize(token, value);
   for (const type of spec.tokens.typography) addSize(type.name, type.size);
   return index;
+}
+
+// src/lib/asset-checks.mjs
+import { inflateSync } from "node:zlib";
+function pngAlpha(buf) {
+  if (buf.length < 33 || buf.readUInt32BE(0) !== 2303741511) return null;
+  const width = buf.readUInt32BE(16);
+  const height = buf.readUInt32BE(20);
+  const [depth, colorType, , , interlace] = buf.subarray(24, 29);
+  const hasAlpha = colorType === 6 || colorType === 4;
+  if (!hasAlpha || depth !== 8 || interlace !== 0) return { width, height, hasAlpha, corners: null };
+  const idat = [];
+  for (let off = 8; off < buf.length; ) {
+    const len = buf.readUInt32BE(off);
+    const type = buf.toString("ascii", off + 4, off + 8);
+    if (type === "IDAT") idat.push(buf.subarray(off + 8, off + 8 + len));
+    off += 12 + len;
+  }
+  const raw = inflateSync(Buffer.concat(idat));
+  const bpp = colorType === 6 ? 4 : 2;
+  const stride = width * bpp;
+  const rows = [];
+  let prev = Buffer.alloc(stride);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const line = Buffer.from(raw.subarray(y * (stride + 1) + 1, (y + 1) * (stride + 1)));
+    for (let i = 0; i < stride; i++) {
+      const a = i >= bpp ? line[i - bpp] : 0;
+      const b = prev[i];
+      const c = i >= bpp ? prev[i - bpp] : 0;
+      const p = a + b - c;
+      const pred = filter === 1 ? a : filter === 2 ? b : filter === 3 ? a + b >> 1 : filter === 4 ? Math.abs(p - a) <= Math.abs(p - b) && Math.abs(p - a) <= Math.abs(p - c) ? a : Math.abs(p - b) <= Math.abs(p - c) ? b : c : 0;
+      line[i] = line[i] + pred & 255;
+    }
+    rows.push(line);
+    prev = line;
+  }
+  const alphaAt = (x, y) => rows[y][x * bpp + bpp - 1];
+  return { width, height, hasAlpha, corners: [alphaAt(0, 0), alphaAt(width - 1, 0), alphaAt(0, height - 1), alphaAt(width - 1, height - 1)] };
+}
+function svgIssues(text) {
+  const issues = [];
+  if (!/<svg[^>]*\sviewBox=/i.test(text)) issues.push("has no viewBox (it will not scale)");
+  if (/<image[\s>]/i.test(text)) issues.push("has an embedded raster <image> (not a real vector)");
+  return issues;
 }
 
 // plugins/build-core/skills/site-spec/schemas/common.schema.json
@@ -14784,7 +14829,8 @@ var page_schema_default = {
           enum: [
             "small",
             "medium",
-            "large"
+            "large",
+            "full"
           ]
         },
         background: {
@@ -15358,6 +15404,9 @@ var assets_schema_default = {
           scaleApproved: {
             type: "string",
             minLength: 3
+          },
+          transparent: {
+            type: "boolean"
           }
         }
       }
@@ -15394,7 +15443,7 @@ function schemaErrors(file, validate, data) {
   if (validate(data)) return [];
   return validate.errors.map((e) => ({ file, path: e.instancePath || "/", message: e.message }));
 }
-function crossReferenceErrors(spec) {
+function crossReferenceErrors(spec, warnings = []) {
   const errors = [];
   const err = (file, path, message) => errors.push({ file, path, message });
   const colors = new Set(spec.tokens.colors.map((c) => c.name));
@@ -15439,8 +15488,21 @@ function crossReferenceErrors(spec) {
     if (asset.kind === "raster" && (asset.scale ?? 1) < 2 && !asset.scaleApproved) {
       err("assets/manifest.yaml", `/assets/${i}`, `raster asset "${asset.id}" must be exported at scale 2 or higher`);
     }
-    if (spec.dir && !existsSync2(join2(spec.dir, "assets", asset.file))) {
+    const path = spec.dir && join2(spec.dir, "assets", asset.file);
+    if (path && !existsSync2(path)) {
       err("assets/manifest.yaml", `/assets/${i}/file`, `asset file "${asset.file}" not found in assets/`);
+    } else if (path) {
+      const at = `/assets/${i}/file`;
+      const kb = Math.round(statSync(path).size / 1024);
+      if (kb > 500) warnings.push({ file: "assets/manifest.yaml", path: at, message: `${asset.file} is ${kb}KB (over ~500KB): propose WebP/compression to the developer` });
+      if (asset.file.toLowerCase().endsWith(".svg")) {
+        for (const issue of svgIssues(readFileSync2(path, "utf8"))) err("assets/manifest.yaml", at, `${asset.file} ${issue}`);
+      }
+      if (asset.transparent) {
+        const png = asset.file.toLowerCase().endsWith(".png") ? pngAlpha(readFileSync2(path)) : null;
+        if (!png || !png.hasAlpha) err("assets/manifest.yaml", at, `${asset.file} is marked transparent but has no alpha channel (export it as a transparent PNG)`);
+        else if (png.corners && png.corners.some((a) => a !== 0)) err("assets/manifest.yaml", at, `${asset.file} is marked transparent but its corners are opaque (alpha ${png.corners.join("/")}): the export was flattened`);
+      }
     }
   });
   const checkVariant = (file, path, ref, variant) => {
@@ -15581,9 +15643,10 @@ function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
   for (const [slug, page] of Object.entries(spec.pages)) {
     errors.push(...schemaErrors(`pages/${slug}.yaml`, validators.page, page));
   }
-  if (errors.length === 0) errors.push(...crossReferenceErrors(spec));
+  const warnings = [];
+  if (errors.length === 0) errors.push(...crossReferenceErrors(spec, warnings));
   if (requireResolvedQuestions) errors.push(...openQuestionErrors(spec.openQuestions));
-  return { ok: errors.length === 0, errors };
+  return { ok: errors.length === 0, errors, warnings };
 }
 
 // src/cli/validate-spec.mjs

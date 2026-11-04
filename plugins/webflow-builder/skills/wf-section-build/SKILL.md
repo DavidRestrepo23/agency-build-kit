@@ -28,6 +28,8 @@ Phase A never waits for the Designer, so it can run unattended and be split acro
 
 ## Phase A — Structure (headless)
 
+**Pattern first:** for anything repeated (cards, slides, tabs, accordion items, buttons with icons, components), build ONE, read it back (`query_elements` / `query_styles`), confirm it is right, and only then repeat it.
+
 1. Validate names:
    ```bash
    node "${CLAUDE_PLUGIN_ROOT}/scripts/validate-class-names.mjs" <every classesToCreate and utilitiesUsed name>
@@ -102,7 +104,7 @@ Start of phase B (once per run): `designer_tool get_current_page`. Not connected
        Then `validate-spec`, re-run `plan-section` and apply only what changed with the headless `data_*` tools: `update_style` for changed entries plus `remove_properties` for properties the plan no longer sets (never the same property in both); rebuild the WHTML only when `children` changed (delete the section's elements first).
     6. After every iteration: `validate-class-names` on the plan's classes, no empty combos (`query_styles`), no hard-coded token values (validate-spec covers overrides).
     7. After the 3rd iteration, stop even if diffs remain: they go to `--pending`.
-    Do not use absolute positioning to match the screenshot except for `decorative` layers; prefer flex/grid overrides so tablet and mobile keep working.
+    Do not use absolute positioning to match the screenshot except for `decorative` layers; prefer flex/grid overrides so tablet and mobile keep working. Never fix a `height` on content (validate-spec rejects it; use `min-height`). A grid of 4+ columns that renders too narrow: override it to `display: flex` and give the item class `flex: 1 1 0; min-width: 0`.
 12. Record (re-run `plan-section` first: overrides change `specHash`):
     ```bash
     node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section> --status built --hash <specHash> --ids <comma-separated element ids> --page-id <pageId> --iterations <n> --pending "<diff>;<diff>"

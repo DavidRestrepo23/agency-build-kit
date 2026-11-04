@@ -47,7 +47,8 @@
           "enum": [
             "small",
             "medium",
-            "large"
+            "large",
+            "full"
           ]
         },
         "background": {

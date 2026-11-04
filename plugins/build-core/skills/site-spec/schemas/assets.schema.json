@@ -45,6 +45,9 @@
           "scaleApproved": {
             "type": "string",
             "minLength": 3
+          },
+          "transparent": {
+            "type": "boolean"
           }
         }
       }

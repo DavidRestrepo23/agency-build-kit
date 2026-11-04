@@ -355,7 +355,8 @@ export function planSection(spec, pageSlug, sectionId) {
     ctx.utilities.add(cls);
     body = `<div class="${cls}">${body}</div>`;
   }
-  if (section.container) {
+  // container: full → content fills the screen minus padding-global (no max-width wrapper).
+  if (section.container && section.container !== 'full') {
     const cls = `container-${section.container}`;
     ctx.utilities.add(cls);
     body = `<div class="${cls}">${body}</div>`;

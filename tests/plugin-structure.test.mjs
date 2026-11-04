@@ -103,3 +103,10 @@ for (const plugin of PLUGINS) {
     }
   });
 }
+
+test('webflow-builder guard hook points to a bundled script', () => {
+  const hooks = readJson(join(ROOT, 'plugins/webflow-builder/hooks/hooks.json'));
+  const command = hooks.hooks.PreToolUse[0].hooks[0].command;
+  const script = command.match(/scripts\/([a-z-]+\.mjs)/)[1];
+  assert.ok(existsSync(join(ROOT, 'plugins/webflow-builder/scripts', script)), script);
+});

@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { cpSync, rmSync, writeFileSync } from 'node:fs';
+import zlib from 'node:zlib';
 import { join } from 'node:path';
 import { loadSpec } from '../src/lib/load-spec.mjs';
 import { validateSpec } from '../src/lib/validate-spec.mjs';
@@ -327,4 +328,42 @@ test('replicator: overrides cannot fix a height in px/rem on content classes (us
   assert.deepEqual(errorsFor(withOverrides({ features_grid: { main: { 'min-height': '26.25rem', height: 'auto' } } })), []);
   const dir = withOverrides({ features_decor: { main: { height: '120px' } } });
   assert.ok(!errorsFor(dir).some((e) => /min-height/.test(e.message)), 'decorative wrappers may have a fixed height');
+});
+
+function pngBytes({ alpha, corner = 0, size = 2 }) {
+  // Minimal non-interlaced 8-bit PNG: RGBA (colour type 6) or RGB (2), filter 0 per row.
+  const crc = (buf) => { let c = ~0; for (const b of buf) { c ^= b; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); } return ~c >>> 0; };
+  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); };
+  const ch = alpha ? 4 : 3;
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(size, 0); ihdr.writeUInt32BE(size, 4); ihdr[8] = 8; ihdr[9] = alpha ? 6 : 2;
+  const rows = [];
+  for (let y = 0; y < size; y++) { const row = Buffer.alloc(1 + size * ch, 200); row[0] = 0; if (alpha) for (let x = 0; x < size; x++) row[1 + x * ch + 3] = corner; rows.push(row); }
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(Buffer.concat(rows))), chunk('IEND', Buffer.alloc(0))]);
+}
+
+test('assets: svg needs a viewBox and no embedded raster', () => {
+  const dir = copyFixture();
+  writeFileSync(join(dir, 'assets/logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><image href="data:image/png;base64,AAAA"/></svg>');
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => /logo\.svg.*viewBox/.test(e.message)), JSON.stringify(errors));
+  assert.ok(errors.some((e) => /logo\.svg.*embedded raster/.test(e.message)));
+});
+
+test('assets: transparent cutouts need an alpha channel and transparent corners', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'assets/manifest.yaml', (m) => { m.assets[0].transparent = true; });
+  writeFileSync(join(dir, 'assets/hero-mockup@2x.png'), pngBytes({ alpha: false }));
+  assert.ok(errorsFor(dir).some((e) => /no alpha channel/.test(e.message)));
+  writeFileSync(join(dir, 'assets/hero-mockup@2x.png'), pngBytes({ alpha: true, corner: 255 }));
+  assert.ok(errorsFor(dir).some((e) => /corners are opaque/.test(e.message)));
+  writeFileSync(join(dir, 'assets/hero-mockup@2x.png'), pngBytes({ alpha: true, corner: 0 }));
+  assert.deepEqual(errorsFor(dir), []);
+});
+
+test('assets: files over 500KB are a warning, not an error', () => {
+  const dir = copyFixture();
+  writeFileSync(join(dir, 'assets/hero-mockup@2x.png'), Buffer.concat([pngBytes({ alpha: false }), Buffer.alloc(600 * 1024)]));
+  const result = validateSpec(loadSpec(dir));
+  assert.equal(result.ok, true);
+  assert.ok(result.warnings.some((w) => /hero-mockup@2x\.png.*KB/.test(w.message)), JSON.stringify(result.warnings));
 });

@@ -113,6 +113,8 @@ Sal (`/exit`) y vuelve a entrar con `claude`.
 >
 > El Designer con la **MCP Bridge app** solo hace falta en la fase visual de `/webflow-builder:wf-build` (snapshots) y en `/webflow-builder:wf-qa`. La estructura de las secciones se construye sin él (`--phase structure`).
 
+> El plugin `webflow-builder` instala un **guard**: antes de publicar o de borrar estilos, variables o páginas en Webflow te pide confirmación, y una vez que `site-spec/build-state.json` tiene el `siteId` del proyecto, bloquea llamadas a otros sitios.
+
 ### 2.5 Ajuste de Chrome (evita desconexiones con Designer)
 
 1. Abre `chrome://settings/performance`.

@@ -7932,7 +7932,7 @@ function planSection(spec, pageSlug, sectionId) {
     ctx.utilities.add(cls);
     body = `<div class="${cls}">${body}</div>`;
   }
-  if (section.container) {
+  if (section.container && section.container !== "full") {
     const cls = `container-${section.container}`;
     ctx.utilities.add(cls);
     body = `<div class="${cls}">${body}</div>`;

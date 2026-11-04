@@ -1,0 +1,13 @@
+{
+  "description": "Webflow guard: asks before publishing or irreversible deletes, and locks MCP calls to the project's site (site-spec/build-state.json).",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/guard.mjs\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

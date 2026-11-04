@@ -25,7 +25,9 @@ Read the `site-spec` skill first; it defines the output format.
 |---|---|
 | Section frame name ("Hero", "Features") | `id` in kebab-case (`hero`, `features`) |
 | Vertical padding of section | `spacing: section.small|medium|large` (closest token) |
-| Inner max-width (~768 / ~1024 / ~1280px) | `container: small|medium|large` |
+| Inner max-width (~768 / ~1024 / ~1280px) | `container: small|medium|large` (content caps and centres) |
+| Content spans the frame minus the side margins (no inner max-width) | `container: full` (content grows with the screen) |
+| Cut-out person/object PNG over a background | raster asset with `transparent: true` (validate-spec checks the alpha); background and cut-out stay separate layers |
 | Auto-layout horizontal with equal children | `layout: { type: grid, columns }` |
 | Auto-layout vertical | `layout: { type: stack }` |
 | Auto-layout horizontal, unequal children | `layout: { type: flex, align, justify }` |

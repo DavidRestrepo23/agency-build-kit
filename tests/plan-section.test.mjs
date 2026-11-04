@@ -376,3 +376,11 @@ test('overrides: a class the plan does not generate is an error', () => {
   editYaml(dir, 'pages/home.yaml', (p) => { p.sections[1].overrides = { features_ghost: { main: { width: '1px' } } }; });
   assert.throws(() => planSection(loadSpec(dir), 'home', 'features'), /override class "features_ghost" is not generated/);
 });
+
+test('container: full fills the screen minus padding-global (no container wrapper)', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'pages/home.yaml', (p) => { p.sections[0].container = 'full'; });
+  const plan = planSection(loadSpec(dir), 'home', 'hero');
+  assert.ok(plan.whtml.startsWith('<section id="hero" class="section_hero"><div class="padding-global"><div class="padding-section-large"><div class="hero_component">'), plan.whtml);
+  assert.ok(!plan.utilitiesUsed.some((u) => u.startsWith('container-')));
+});
