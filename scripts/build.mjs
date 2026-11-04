@@ -14,6 +14,7 @@ const TARGETS = [
   ['src/cli/fetch-google-font.mjs', ['plugins/webflow-builder/scripts/fetch-google-font.mjs']],
   ['src/cli/guard.mjs', ['plugins/webflow-builder/scripts/guard.mjs']],
   ['src/cli/check-published.mjs', ['plugins/webflow-builder/scripts/check-published.mjs']],
+  ['src/cli/figma-coverage.mjs', ['plugins/webflow-builder/scripts/figma-coverage.mjs']],
 ];
 
 for (const [entry, outfiles] of TARGETS) {

@@ -1,4 +1,5 @@
-import { createContext, layoutStyles, relativeIfDecorated, renderChild, withSurface, withTextAlign } from './plan-section.mjs';
+import { applyOverrides, createContext, layoutStyles, relativeIfDecorated, renderChild, withSurface, withTextAlign } from './plan-section.mjs';
+import { sectionHash } from './spec-hash.mjs';
 
 const COLLAPSE_BREAKPOINT = { tablet: 'medium', 'mobile-landscape': 'small' };
 
@@ -40,6 +41,7 @@ export function planComponent(spec, name) {
 
   const plan = {
     component: name,
+    specHash: sectionHash(component, spec),
     classesToCreate: [],
     utilitiesUsed: [],
     whtml: '',
@@ -74,6 +76,7 @@ export function planComponent(spec, name) {
 
   const tag = component.tag ?? 'div';
   plan.whtml = `<${tag} class="${withTextAlign(withSurface(root, component.surface, ctx), component.layout, ctx)}">${inner}</${tag}>`;
+  applyOverrides({ id: name, overrides: component.overrides }, ctx);
   plan.classesToCreate = [...ctx.custom];
   plan.utilitiesUsed = [...ctx.utilities].sort();
   return plan;

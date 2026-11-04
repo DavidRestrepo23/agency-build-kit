@@ -136,10 +136,13 @@ function crossReferenceErrors(spec, warnings = []) {
 
   const tokenNames = new Set([...colors, ...spacing]);
   const valueIndex = tokenValueIndex(spec);
-  const checkOverrides = (file, section, path) => {
-    for (const [cls, breakpoints] of Object.entries(section.overrides ?? {})) {
-      if (cls !== `section_${section.id}` && !cls.startsWith(`${section.id}_`)) {
-        err(file, `${path}/${cls}`, `overrides may only target the section's own classes (section_${section.id}, ${section.id}_*)`);
+  // owner: a section ({ id }) or a component ({ id: name, component: true }).
+  const checkOverrides = (file, owner, path) => {
+    for (const [cls, breakpoints] of Object.entries(owner.overrides ?? {})) {
+      const own = owner.component ? cls.startsWith(`${owner.id}_`) : cls === `section_${owner.id}` || cls.startsWith(`${owner.id}_`);
+      if (!own) {
+        const allowed = owner.component ? `${owner.id}_*` : `section_${owner.id}, ${owner.id}_*`;
+        err(file, `${path}/${cls}`, `overrides may only target the ${owner.component ? 'component' : "section"}'s own classes (${allowed})`);
         continue;
       }
       for (const [bp, props] of Object.entries(breakpoints)) {
@@ -198,6 +201,7 @@ function crossReferenceErrors(spec, warnings = []) {
       }
       checkChild('components.yaml', child, `${base}/children/${i}`, groupNames);
     });
+    checkOverrides('components.yaml', { id: component.name, overrides: component.overrides, component: true }, `${base}/overrides`);
     if (component.collapse && !(component.children ?? []).some((c) => c.type === 'group' && c.name === 'menu')) {
       err('components.yaml', `${base}/collapse`, `collapse requires a group named "menu" among the component children`);
     }

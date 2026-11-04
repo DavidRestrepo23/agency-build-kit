@@ -24,4 +24,4 @@ Load the `client-first` and `wf-bootstrap` skills and follow `wf-bootstrap` exac
 
 ## 3. Report
 
-List created variables (count per collection), utilities, components and the style-guide page link. Ask the developer to review the style guide in Designer before running `/webflow-builder:wf-build <page>`. Do not publish.
+List created variables (count per collection), utilities, components with their visual status (`built` with iterations and pending diffs, or `structure-built` = not yet compared with Figma) and the style-guide page link. Ask the developer to review the style guide in Designer before running `/webflow-builder:wf-build <page>`. Do not publish.

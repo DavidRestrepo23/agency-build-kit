@@ -71,3 +71,26 @@ export function writeState(specDir, state) {
   writeFileSync(tmp, `${JSON.stringify(state, null, 2)}\n`);
   renameSync(tmp, path);
 }
+
+// Shared components (navbar, footer…) built by wf-setup go through the same visual loop as sections.
+export const COMPONENT_STATUSES = ['structure-built', 'built', 'failed'];
+
+export function setComponentState(state, { platform, component, status, specHash, visual, error }) {
+  if (!COMPONENT_STATUSES.includes(status)) throw new Error(`invalid component status "${status}"`);
+  const platformState = state[platform] ?? {};
+  const previous = platformState.components?.[component] ?? {};
+  const entry = {
+    ...previous,
+    status,
+    specHash: specHash ?? previous.specHash ?? null,
+    error: status === 'failed' ? (error ?? 'unknown error') : null,
+    ...(visual ? { visual } : {}),
+    at: new Date().toISOString(),
+  };
+  return { ...state, [platform]: { ...platformState, components: { ...platformState.components, [component]: entry } } };
+}
+
+export function componentNeedsVisual(state, platform, component, specHash) {
+  const entry = state?.[platform]?.components?.[component];
+  return !(entry && entry.status === 'built' && entry.specHash === specHash);
+}

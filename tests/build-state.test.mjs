@@ -116,3 +116,24 @@ test('CLI get reports needsVisual', () => {
   assert.equal(out.needsBuild, false);
   assert.equal(out.needsVisual, true);
 });
+
+test('qa: components have their own state; visual pending until built with the same hash', async () => {
+  const { setComponentState, componentNeedsVisual } = await import('../src/lib/build-state.mjs');
+  let state = setComponentState({}, { platform: 'webflow', component: 'navbar', status: 'structure-built', specHash: 'h1' });
+  assert.equal(componentNeedsVisual(state, 'webflow', 'navbar', 'h1'), true);
+  state = setComponentState(state, { platform: 'webflow', component: 'navbar', status: 'built', specHash: 'h1', visual: { iterations: 2, pending: [] } });
+  assert.equal(componentNeedsVisual(state, 'webflow', 'navbar', 'h1'), false);
+  assert.equal(componentNeedsVisual(state, 'webflow', 'navbar', 'h2'), true, 'component changed');
+  assert.equal(componentNeedsVisual(state, 'webflow', 'footer', 'x'), true, 'never verified');
+  assert.deepEqual(state.webflow.components.navbar.visual, { iterations: 2, pending: [] });
+  assert.throws(() => setComponentState(state, { platform: 'webflow', component: 'navbar', status: 'qa-pass' }), /invalid component status/);
+});
+
+test('CLI set-component / get-component', () => {
+  const dir = copyFixture();
+  const run = (args) => JSON.parse(spawnSync(process.execPath, ['src/cli/build-state.mjs', ...args], { encoding: 'utf8' }).stdout);
+  run(['set-component', dir, '--component', 'navbar', '--status', 'built', '--hash', 'h', '--iterations', '1', '--pending', 'logo 4px low']);
+  const out = run(['get-component', dir, '--component', 'navbar', '--hash', 'h']);
+  assert.equal(out.needsVisual, false);
+  assert.deepEqual(out.current.visual, { iterations: 1, pending: ['logo 4px low'] });
+});

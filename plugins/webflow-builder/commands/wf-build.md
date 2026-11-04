@@ -69,7 +69,8 @@ For each section, get the plan (`node "${CLAUDE_PLUGIN_ROOT}/scripts/plan-sectio
 - Otherwise rebuild: if `current.elementIds` is non-empty (also after a `building` interruption), delete those elements first so the section is never duplicated; then follow **Phase A** of `wf-section-build`.
 - A section ending in `failed` stops the command.
 
-**Phase B pass** (`--phase all` or `visual`), then one section at a time, never in parallel:
+**Phase B pass** (`--phase all` or `visual`), then one at a time, never in parallel:
+- **Components first:** for every component used on the page (navbar, footer…), `build-state.mjs get-component site-spec --component <name> --hash <plan-component specHash>`; `needsVisual: true` → run the component visual loop from `wf-bootstrap` step 7b before the sections, so sections are compared with the right navbar/footer around them.
 - `needsVisual: true` (status `structure-built`, same hash) → follow **Phase B** of `wf-section-build`.
 - `needsBuild: true` → its structure is missing or outdated: with `--phase visual`, report it ("run --phase structure first") and continue with the next section.
 

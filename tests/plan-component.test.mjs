@@ -81,3 +81,19 @@ test('CLI plan-component', () => {
   assert.equal(run.status, 0, run.stdout);
   assert.equal(JSON.parse(run.stdout).component, 'navbar');
 });
+
+test('qa: component overrides apply to the component own classes; plan has a specHash', async () => {
+  const { copyFixture, editYaml } = await import('./helpers.mjs');
+  const { loadSpec } = await import('../src/lib/load-spec.mjs');
+  const dir = copyFixture();
+  editYaml(dir, 'components.yaml', (c) => {
+    c.components.find((x) => x.name === 'navbar').overrides = { navbar_component: { main: { 'padding-top': '$space.md', 'justify-content': 'center' } } };
+  });
+  const s = loadSpec(dir);
+  const plan = planComponent(s, 'navbar');
+  const root = plan.styles.find((x) => x.class === 'navbar_component' && x.breakpoint === 'main');
+  assert.equal(root.variables['padding-top'], 'space-md');
+  assert.equal(root.props['justify-content'], 'center');
+  assert.match(plan.specHash, /^sha256:/);
+  assert.notEqual(plan.specHash, planComponent(spec, 'navbar').specHash, 'overrides change the hash');
+});

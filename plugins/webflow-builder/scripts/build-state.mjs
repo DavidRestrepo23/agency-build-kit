@@ -84,12 +84,32 @@ function writeState(specDir, state) {
 `);
   renameSync(tmp, path);
 }
+var COMPONENT_STATUSES = ["structure-built", "built", "failed"];
+function setComponentState(state, { platform, component, status, specHash, visual, error }) {
+  if (!COMPONENT_STATUSES.includes(status)) throw new Error(`invalid component status "${status}"`);
+  const platformState = state[platform] ?? {};
+  const previous = platformState.components?.[component] ?? {};
+  const entry = {
+    ...previous,
+    status,
+    specHash: specHash ?? previous.specHash ?? null,
+    error: status === "failed" ? error ?? "unknown error" : null,
+    ...visual ? { visual } : {},
+    at: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  return { ...state, [platform]: { ...platformState, components: { ...platformState.components, [component]: entry } } };
+}
+function componentNeedsVisual(state, platform, component, specHash) {
+  const entry = state?.[platform]?.components?.[component];
+  return !(entry && entry.status === "built" && entry.specHash === specHash);
+}
 
 // src/cli/build-state.mjs
 var OPTIONS = {
   platform: { type: "string", default: "webflow" },
   page: { type: "string" },
   section: { type: "string" },
+  component: { type: "string" },
   status: { type: "string" },
   hash: { type: "string" },
   ids: { type: "string" },
@@ -126,10 +146,21 @@ runCli((argv) => {
     writeState(specDir, next);
     return { ok: true, current: next[values.platform].pages[values.page].sections[values.section] };
   }
+  const visual = values.iterations !== void 0 ? { iterations: Number(values.iterations), pending: (values.pending ?? "").split(";").map((s) => s.trim()).filter(Boolean) } : void 0;
+  if (command === "get-component" || command === "set-component") {
+    if (!values.component) throw new Error("--component is required");
+    if (command === "get-component") {
+      const current = state?.[values.platform]?.components?.[values.component] ?? null;
+      return { ok: true, needsVisual: componentNeedsVisual(state, values.platform, values.component, values.hash), current };
+    }
+    const next = setComponentState(state, { platform: values.platform, component: values.component, status: values.status, specHash: values.hash, visual, error: values.error });
+    writeState(specDir, next);
+    return { ok: true, current: next[values.platform].components[values.component] };
+  }
   if (command === "set-setup") {
     const next = setSetupState(state, { platform: values.platform, siteId: values["site-id"], status: values.status });
     writeState(specDir, next);
     return { ok: true, setup: next[values.platform].setup };
   }
-  throw new Error(`unknown command "${command}"; use get | set-section | set-setup`);
+  throw new Error(`unknown command "${command}"; use get | set-section | set-setup | get-component | set-component`);
 });

@@ -367,3 +367,13 @@ test('assets: files over 500KB are a warning, not an error', () => {
   assert.equal(result.ok, true);
   assert.ok(result.warnings.some((w) => /hero-mockup@2x\.png.*KB/.test(w.message)), JSON.stringify(result.warnings));
 });
+
+test('qa: component overrides only target the component own classes', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'components.yaml', (c) => {
+    c.components.find((x) => x.name === 'navbar').overrides = { hero_component: { main: { width: '50%' } }, navbar_menu: { main: { 'padding-top': '2rem' } } };
+  });
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => e.file === 'components.yaml' && /hero_component/.test(e.path) && /navbar_\*/.test(e.message)), JSON.stringify(errors));
+  assert.ok(errors.some((e) => /\$space\.lg/.test(e.message)));
+});
