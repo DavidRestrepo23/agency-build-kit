@@ -28,3 +28,19 @@ Goal: produce a valid `site-spec/` in the current project repo, then stop for de
    ```
    Fix every error (re-read Figma when needed) until `ok: true`.
 10. Report to the developer (in `language`): pages and section counts, every `behavior` (section › group: type + options), layouts inferred from frames without auto layout (medium: "inferred, review"; low: also in open questions), decorative layers placed absolutely and whether they hide on mobile, interactive elements and the behavior chosen for each, token counts, components, assets, sections flagged `needsCodeComponent`, components with no `children` (they are built as an empty shell plus a placeholder, so list them as manual work), surfaces defined and where they are used, every asset with `scaleApproved` plus its reason, and the open questions list. Tell them the next step is resolving open questions (mark `- [x]`) and then running the platform setup command (e.g. `/webflow-builder:wf-setup`).
+
+## Progress log (project memory)
+
+Before starting, read the resume point and continue from it instead of redoing finished work:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" status site-spec
+```
+After each milestone below, append an entry to `site-spec/progress.md` (one short line of summary; ids and counts, not prose), so a new session can resume if this one closes:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" log site-spec --command "/build-core:build-audit" --step "<milestone>" --summary "<what was done, counts, ids>" --next "<next command>"
+```
+Milestones:
+- language chosen and page list confirmed
+- sections extracted (ids, inferred layouts and their confidence)
+- behaviors answered
+- spec validated (counts, open questions) → next: resolve open-questions.md, then /webflow-builder:wf-setup

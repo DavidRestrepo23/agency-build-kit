@@ -17,3 +17,16 @@ Arguments: $ARGUMENTS → `<page> <section-id>`.
    node "${CLAUDE_PLUGIN_ROOT}/scripts/build-state.mjs" set-section site-spec --platform webflow --page <page> --section <section-id> --status built --hash <specHash>
    ```
 6. Report the component name, library and anything to verify in preview.
+
+## Progress log (project memory)
+
+Before starting, read the resume point and continue from it instead of redoing finished work:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" status site-spec
+```
+After each milestone below, append an entry to `site-spec/progress.md` (one short line of summary; ids and counts, not prose), so a new session can resume if this one closes:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" log site-spec --command "/webflow-builder:wf-component" --step "<milestone>" --summary "<what was done, counts, ids>" --next "<next command>"
+```
+Milestones:
+- component scaffolded / deployed / placed in its slot

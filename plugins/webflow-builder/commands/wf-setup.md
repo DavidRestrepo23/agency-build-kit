@@ -25,3 +25,19 @@ Load the `client-first` and `wf-bootstrap` skills and follow `wf-bootstrap` exac
 ## 3. Report
 
 List created variables (count per collection), utilities, components with their visual status (`built` with iterations and pending diffs, or `structure-built` = not yet compared with Figma) and the style-guide page link. Ask the developer to review the style guide in Designer before running `/webflow-builder:wf-build <page>`. Do not publish.
+
+## Progress log (project memory)
+
+Before starting, read the resume point and continue from it instead of redoing finished work:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" status site-spec
+```
+After each milestone below, append an entry to `site-spec/progress.md` (one short line of summary; ids and counts, not prose), so a new session can resume if this one closes:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" log site-spec --command "/webflow-builder:wf-setup" --step "<milestone>" --summary "<what was done, counts, ids>" --next "<next command>"
+```
+Milestones:
+- variables and fonts created
+- utilities and style guide created
+- each component built and its visual status (built / structure-built)
+- setup done → next: /webflow-builder:wf-build <page>

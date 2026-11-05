@@ -51,7 +51,7 @@ Page: <page>. Your sections, in this order: <id>, <id>, <id>. Build ONLY these s
   replacing ${CLAUDE_PLUGIN_ROOT} with <kit>/plugins/webflow-builder.
 Rules: setup is already done — do not run wf-setup or change variables, utilities or other sections;
 edit only your sections in site-spec/pages/<page>.yaml;
-record each section with build-state.mjs set-section (building after the WHTML, structure-built at the end);
+record each section with build-state.mjs set-section (building after the WHTML, structure-built at the end) and log it with progress.mjs log;
 do not run the visual loop; never publish the site.
 At the end, report per section: structure-built / failed / placeholders.
 ```
@@ -77,3 +77,18 @@ For each section, get the plan (`node "${CLAUDE_PLUGIN_ROOT}/scripts/plan-sectio
 ## 3. Report
 
 Table: section → structure-built / built / skipped / failed / placeholder, visual iterations, pending diffs (from build-state `visual`). Sections left `structure-built` are **not done**: tell the developer to run `--phase visual` with the Designer open. List every `overrides` the loop wrote to the YAML (the developer reviews them in the diff). List placeholders (code components → `/webflow-builder:wf-component <section>`, forms → build natively in Designer). Suggest `/webflow-builder:wf-qa <page>` once every section is `built`. Do not publish.
+
+## Progress log (project memory)
+
+Before starting, read the resume point and continue from it instead of redoing finished work:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" status site-spec
+```
+After each milestone below, append an entry to `site-spec/progress.md` (one short line of summary; ids and counts, not prose), so a new session can resume if this one closes:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" log site-spec --command "/webflow-builder:wf-build" --step "<milestone>" --summary "<what was done, counts, ids>" --next "<next command>"
+```
+Milestones:
+- each section that reaches structure-built or built (with visual iterations and pending diffs)
+- each section that fails (tool + error)
+- end of the run → next: the remaining phase, or /webflow-builder:wf-qa <page>

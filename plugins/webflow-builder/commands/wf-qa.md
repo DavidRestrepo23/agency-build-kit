@@ -84,3 +84,18 @@ Show the classified diff list and ask ONE confirmation before changing anything.
 Never publish, never delete styles/variables/pages (the guard asks); list leftovers for the developer.
 
 Without `--fix`, end with: the classified diffs, and the command to apply them (`/webflow-builder:wf-qa <page> --fix`).
+
+## Progress log (project memory)
+
+Before starting, read the resume point and continue from it instead of redoing finished work:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" status site-spec
+```
+After each milestone below, append an entry to `site-spec/progress.md` (one short line of summary; ids and counts, not prose), so a new session can resume if this one closes:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/scripts/progress.mjs" log site-spec --command "/webflow-builder:wf-qa" --step "<milestone>" --summary "<what was done, counts, ids>" --next "<next command>"
+```
+Milestones:
+- pass 1 and pass 2 results (counts per class: build error / spec error / omission)
+- each fix applied with --fix
+- end → next: /webflow-builder:wf-qa <page> --fix, or "ready for the developer to publish"

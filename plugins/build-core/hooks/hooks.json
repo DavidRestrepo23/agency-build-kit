@@ -1,0 +1,12 @@
+{
+  "description": "Resume point: in a project with site-spec/, tells each new session where the work stopped (build-state + progress.md) and the next command.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/session-resume.mjs\"", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

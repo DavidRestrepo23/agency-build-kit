@@ -115,6 +115,8 @@ Sal (`/exit`) y vuelve a entrar con `claude`.
 
 > El plugin `webflow-builder` instala un **guard**: antes de publicar o de borrar estilos, variables o páginas en Webflow te pide confirmación, y una vez que `site-spec/build-state.json` tiene el `siteId` del proyecto, bloquea llamadas a otros sitios.
 
+> **Memoria del proyecto:** cada comando registra sus hitos en `site-spec/progress.md`. Si cierras la sesión, al abrir Claude Code en la carpeta del proyecto el kit te dice dónde quedó el trabajo y cuál es el siguiente comando (también puedes verlo con `node <kit>/plugins/build-core/scripts/progress.mjs status site-spec --text`).
+
 ### 2.5 Ajuste de Chrome (evita desconexiones con Designer)
 
 1. Abre `chrome://settings/performance`.

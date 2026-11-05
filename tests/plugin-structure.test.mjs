@@ -110,3 +110,9 @@ test('webflow-builder guard hook points to a bundled script', () => {
   const script = command.match(/scripts\/([a-z-]+\.mjs)/)[1];
   assert.ok(existsSync(join(ROOT, 'plugins/webflow-builder/scripts', script)), script);
 });
+
+test('build-core resume hook points to a bundled script', () => {
+  const hooks = readJson(join(ROOT, 'plugins/build-core/hooks/hooks.json'));
+  const script = hooks.hooks.SessionStart[0].hooks[0].command.match(/scripts\/([a-z-]+\.mjs)/)[1];
+  assert.ok(existsSync(join(ROOT, 'plugins/build-core/scripts', script)), script);
+});
