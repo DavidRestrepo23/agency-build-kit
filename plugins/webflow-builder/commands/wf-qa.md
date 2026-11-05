@@ -55,6 +55,7 @@ Do not read the YAML to decide what is right here; read it only afterwards, to c
    | spec = Figma, Webflow ≠ spec | build error | rebuild that section / component |
    | spec ≠ Figma | spec or audit error | correct the spec (`children`, `overrides`, `components.yaml`, tokens), then rebuild |
    | Figma frame in `uncovered` | audit omission | add the section (or component) to the spec, then build it |
+   | diff inside a shared section component | component error | fix it once in `components.yaml` (overrides/children) — every page with an instance gets it; only per-page copy goes in the instance `props` |
    | `missingInFigma` | stale spec | ask the developer: remove the section from the spec or update its `figmaNode` |
 
 Tablet/mobile: ask the developer whether to publish to the `.webflow.io` staging subdomain; only on an explicit yes use the official `safe-publish` flow for staging (the guard asks again), then:

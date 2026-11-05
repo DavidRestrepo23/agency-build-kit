@@ -97,3 +97,30 @@ test('qa: component overrides apply to the component own classes; plan has a spe
   assert.match(plan.specHash, /^sha256:/);
   assert.notEqual(plan.specHash, planComponent(spec, 'navbar').specHash, 'overrides change the hash');
 });
+
+test('shared: children marked prop/hrefProp get data-prop attributes and become component props', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'components.yaml', (c) => {
+    c.components.push({
+      name: 'cta-band', figmaNode: '4:1', variants: [{ name: 'default' }], props: ['title', 'body', 'cta-text', 'cta-link', 'photo'],
+      layout: { type: 'stack', gap: 'space.md' },
+      children: [
+        { type: 'heading', level: 2, style: 'heading.h2', text: 'Ready?', prop: 'title' },
+        { type: 'text', style: 'text.regular', text: 'Talk to us.', prop: 'body' },
+        { type: 'button', text: 'Book', href: '#contact', prop: 'cta-text', hrefProp: 'cta-link' },
+        { type: 'image', asset: 'hero-mockup', alt: 'Team', ratio: '4/3', prop: 'photo' },
+      ],
+    });
+  });
+  const plan = planComponent(loadSpec(dir), 'cta-band');
+  assert.ok(plan.whtml.includes('<h2 class="heading-style-h2" data-prop="title">Ready?</h2>'), plan.whtml);
+  assert.ok(plan.whtml.includes('<a class="button" href="#contact" data-prop="cta-text" data-prop-href="cta-link">Book</a>'));
+  assert.ok(plan.whtml.includes('data-prop="photo"'));
+  assert.deepEqual(plan.props, [
+    { name: 'title', kind: 'text', default: 'Ready?' },
+    { name: 'body', kind: 'text', default: 'Talk to us.' },
+    { name: 'cta-text', kind: 'text', default: 'Book' },
+    { name: 'cta-link', kind: 'link', default: '#contact' },
+    { name: 'photo', kind: 'image', default: 'hero-mockup' },
+  ]);
+});

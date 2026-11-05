@@ -5,6 +5,7 @@ const TARGETS = [
   ['src/cli/infer-layout.mjs', ['plugins/build-core/scripts/infer-layout.mjs']],
   ['src/cli/progress.mjs', ['plugins/build-core/scripts/progress.mjs', 'plugins/webflow-builder/scripts/progress.mjs']],
   ['src/cli/session-resume.mjs', ['plugins/build-core/scripts/session-resume.mjs']],
+  ['src/cli/shared-sections.mjs', ['plugins/build-core/scripts/shared-sections.mjs']],
   ['src/cli/validate-class-names.mjs', ['plugins/webflow-builder/scripts/validate-class-names.mjs']],
   ['src/cli/plan-setup.mjs', ['plugins/webflow-builder/scripts/plan-setup.mjs']],
   ['src/cli/plan-section.mjs', ['plugins/webflow-builder/scripts/plan-section.mjs']],

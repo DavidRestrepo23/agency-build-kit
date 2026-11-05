@@ -35,6 +35,7 @@ Read the `site-spec` skill first; it defines the output format.
 | Text with heading style | `heading` (level from semantic order, style `heading.hN`) |
 | Body text | `text` with `text.<size>` |
 | Instance of a library component | `component` with `ref` + `variant` |
+| Section frame that is an instance of a main component (`instance` in `get_metadata`) | record its main component id/name as `figmaComponent` on the section — the audit groups sections by it to build them once as a shared component |
 | Vector / icon / logo | `svg` asset |
 | Image fill / photo | `image` raster asset, `ratio` from frame size |
 | Page frame fill and dominant body text color/style | `tokens.yaml` `page: { background, color, text }` |

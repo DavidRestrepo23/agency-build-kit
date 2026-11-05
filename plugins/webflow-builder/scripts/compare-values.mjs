@@ -7828,7 +7828,7 @@ function renderButton(child, ctx) {
     classes.push(`is-${child.variant}`);
     ctx.utilities.add(`is-${child.variant}`);
   }
-  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}">${escapeHtml(child.text ?? "")}</a>`;
+  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}"${propAttrs(child)}>${escapeHtml(child.text ?? "")}</a>`;
 }
 function addStyles(ctx, entries) {
   mergeStyles(ctx.plan.styles, entries);
@@ -7937,6 +7937,9 @@ function renderBehavior(child, cls, ctx) {
       throw new Error(`unsupported behavior "${b.type}"`);
   }
 }
+function propAttrs(child) {
+  return `${child.prop ? ` data-prop="${child.prop}"` : ""}${child.hrefProp ? ` data-prop-href="${child.hrefProp}"` : ""}`;
+}
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
 }
@@ -7961,11 +7964,11 @@ function renderChild(child, ctx) {
   switch (child.type) {
     case "heading": {
       const cls = textClass(`heading-style-${child.style.split(".")[1]}`, child, ctx);
-      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
+      return `<h${child.level} class="${cls}"${propAttrs(child)}>${escapeHtml(child.text)}</h${child.level}>`;
     }
     case "text": {
       const cls = textClass(`text-size-${child.style.split(".")[1]}`, child, ctx);
-      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
+      return `<p class="${cls}"${propAttrs(child)}>${escapeHtml(child.text)}</p>`;
     }
     case "rich-text": {
       const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${richTextHtml(p.trim())}</p>`).join("");
@@ -7977,12 +7980,12 @@ function renderChild(child, ctx) {
       } else {
         ctx.utilities.add(cls);
       }
-      return `<div class="${cls}">${paragraphs}</div>`;
+      return `<div class="${cls}"${propAttrs(child)}>${paragraphs}</div>`;
     }
     case "image": {
       const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
       ctx.plan.assets.push({ id: child.asset, kind: "raster", alt: child.alt, targetClass: image, order: nextOrder(ctx, image) });
-      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"></div>`;
+      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"${propAttrs(child)}></div>`;
     }
     case "svg": {
       const cls = `${id}_icon`;
@@ -7993,7 +7996,7 @@ function renderChild(child, ctx) {
     case "link": {
       const cls = `${id}_link`;
       ctx.custom.add(cls);
-      return `<a class="${cls}" href="${escapeHtml(child.href)}">${escapeHtml(child.text)}</a>`;
+      return `<a class="${cls}" href="${escapeHtml(child.href)}"${propAttrs(child)}>${escapeHtml(child.text)}</a>`;
     }
     case "button":
       return renderButton(child, ctx);

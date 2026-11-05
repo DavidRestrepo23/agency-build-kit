@@ -26,7 +26,7 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 1. **Neutral.** Never write platform class names (`heading-style-h1`, `section_hero`). Use semantic roles: `heading.h1`, `text.large`, `section.large`, `space.md`, `container: large` (or `full` when the content fills the screen minus the side margins). Section backgrounds always span edge to edge.
 2. **Token names:** `group.name` lowercase kebab parts (`brand.primary`). Typography: `heading.h1`–`heading.h6` or `text.<size>`. Spacing: `section.small|medium|large` or `space.<size>`; `space.top|bottom|left|right|horizontal|vertical|global|section-small|section-medium|section-large` are reserved. Radii: use `radii.button` for the button corner radius (other radii keys are informational).
 3. **Responsive values:** a number, or `{ desktop, tablet?, mobileLandscape?, mobile? }` (Webflow 991 / 767 / 478 px). Missing `tablet` inherits `desktop`; missing `mobileLandscape` inherits `mobile` (so `mobile` applies from 767px down), then `tablet`; missing `mobile` inherits `mobileLandscape`.
-4. **Ids:** section `id`, group `name`, asset `id`, component `name`: lowercase kebab-case, unique in their scope. Group names `component`, `image`, `image-wrapper`, `icon`, `link`, `list`, `list-item`, `form`, `embed-placeholder` and anything ending in `-slot` are reserved.
+4. **Ids:** section `id`, group `name`, asset `id`, component `name`: lowercase kebab-case, unique in their scope. A section id is unique **across the site** (classes derive from it): the same id on two pages must be the same section — better, a shared component. Group names `component`, `image`, `image-wrapper`, `icon`, `link`, `list`, `list-item`, `form`, `embed-placeholder` and anything ending in `-slot` are reserved.
 5. **Never invent copy.** Placeholder text repeated across instances → add an open question instead.
 6. **Assets:** logos/icons `kind: svg` (with a `viewBox`, no embedded raster); photos/mockups `kind: raster` with `scale: 2`; cut-outs add `transparent: true` (alpha channel and transparent corners are checked). Manifest `file` is a file name relative to `site-spec/assets/` (e.g. `hero-mockup@2x.png`, not `assets/hero-mockup@2x.png`). Files over ~500KB come back as `warnings` from validate-spec (propose compression; not blocking).
 7. **Code components:** set `needsCodeComponent: true` on sections whose behavior native Webflow cannot express (calculators, complex filters, carousels with logic).
@@ -87,6 +87,27 @@ A `group` can declare a `behavior`; its `children` are the items. Builders turn 
 ```
 
 Only groups take a behavior. Never write one from a guess — `/build-core:build-audit` asks the developer.
+
+## Shared sections and component props
+
+Sections repeated across pages are one component in `components.yaml`, placed in each page as `{ type: component, ref, props }`, so they are built once and edited in one place. Inside a component, any text/heading/button/link/image child can bind a prop: `prop: <name>` (text, or the image for `image`) and `hrefProp: <name>` (the link of a `link`/`button`); prop names must be listed in the component's `props`. Instances may only set declared props. `shared-sections.mjs` finds the candidates; `/build-core:build-audit` converts them with the developer's OK.
+
+```yaml
+# components.yaml
+- name: cta-band
+  figmaNode: "4:1"
+  variants: [{ name: default }]
+  props: [title, cta-text, cta-link]
+  children:
+    - { type: heading, level: 2, style: heading.h2, text: "Ready to grow?", prop: title }
+    - { type: button, text: "Book a call", href: "#contact", prop: cta-text, hrefProp: cta-link }
+# pages/about.yaml
+- id: cta-about
+  figmaNode: "3:9"
+  spacing: section.large
+  children:
+    - { type: component, ref: cta-band, props: { title: "Let's talk", cta-link: "/contact" } }
+```
 
 ## Overrides (visual corrections)
 

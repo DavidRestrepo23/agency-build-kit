@@ -77,6 +77,14 @@ export function planComponent(spec, name) {
   const tag = component.tag ?? 'div';
   plan.whtml = `<${tag} class="${withTextAlign(withSurface(root, component.surface, ctx), component.layout, ctx)}">${inner}</${tag}>`;
   applyOverrides({ id: name, overrides: component.overrides }, ctx);
+  // Props the builder creates on the Webflow component and binds to the data-prop elements.
+  plan.props = [];
+  const collect = (child) => {
+    if (child.prop) plan.props.push({ name: child.prop, kind: child.type === 'image' ? 'image' : 'text', default: child.type === 'image' ? child.asset : child.text });
+    if (child.hrefProp) plan.props.push({ name: child.hrefProp, kind: 'link', default: child.href });
+    (child.children ?? []).forEach(collect);
+  };
+  (component.children ?? []).forEach(collect);
   plan.classesToCreate = [...ctx.custom];
   plan.utilitiesUsed = [...ctx.utilities].sort();
   return plan;

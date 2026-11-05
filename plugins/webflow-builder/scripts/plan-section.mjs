@@ -14529,7 +14529,7 @@ function renderButton(child, ctx) {
     classes.push(`is-${child.variant}`);
     ctx.utilities.add(`is-${child.variant}`);
   }
-  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}">${escapeHtml(child.text ?? "")}</a>`;
+  return `<a class="${classes.join(" ")}" href="${escapeHtml(child.href ?? "#")}"${propAttrs(child)}>${escapeHtml(child.text ?? "")}</a>`;
 }
 function addStyles(ctx, entries) {
   mergeStyles(ctx.plan.styles, entries);
@@ -14638,6 +14638,9 @@ function renderBehavior(child, cls, ctx) {
       throw new Error(`unsupported behavior "${b.type}"`);
   }
 }
+function propAttrs(child) {
+  return `${child.prop ? ` data-prop="${child.prop}"` : ""}${child.hrefProp ? ` data-prop-href="${child.hrefProp}"` : ""}`;
+}
 function createContext(spec, section, plan) {
   return { spec, section, plan, custom: /* @__PURE__ */ new Set(), utilities: /* @__PURE__ */ new Set(), imageClasses: /* @__PURE__ */ new Map(), counts: /* @__PURE__ */ new Map() };
 }
@@ -14662,11 +14665,11 @@ function renderChild(child, ctx) {
   switch (child.type) {
     case "heading": {
       const cls = textClass(`heading-style-${child.style.split(".")[1]}`, child, ctx);
-      return `<h${child.level} class="${cls}">${escapeHtml(child.text)}</h${child.level}>`;
+      return `<h${child.level} class="${cls}"${propAttrs(child)}>${escapeHtml(child.text)}</h${child.level}>`;
     }
     case "text": {
       const cls = textClass(`text-size-${child.style.split(".")[1]}`, child, ctx);
-      return `<p class="${cls}">${escapeHtml(child.text)}</p>`;
+      return `<p class="${cls}"${propAttrs(child)}>${escapeHtml(child.text)}</p>`;
     }
     case "rich-text": {
       const paragraphs = String(child.text).split(/\n\s*\n/).map((p) => `<p>${richTextHtml(p.trim())}</p>`).join("");
@@ -14678,12 +14681,12 @@ function renderChild(child, ctx) {
       } else {
         ctx.utilities.add(cls);
       }
-      return `<div class="${cls}">${paragraphs}</div>`;
+      return `<div class="${cls}"${propAttrs(child)}>${paragraphs}</div>`;
     }
     case "image": {
       const { wrapper, image } = imageClasses(ctx, child.ratio ?? null);
       ctx.plan.assets.push({ id: child.asset, kind: "raster", alt: child.alt, targetClass: image, order: nextOrder(ctx, image) });
-      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"></div>`;
+      return `<div class="${wrapper}"><img class="${image}" alt="${escapeHtml(child.alt)}"${propAttrs(child)}></div>`;
     }
     case "svg": {
       const cls = `${id}_icon`;
@@ -14694,7 +14697,7 @@ function renderChild(child, ctx) {
     case "link": {
       const cls = `${id}_link`;
       ctx.custom.add(cls);
-      return `<a class="${cls}" href="${escapeHtml(child.href)}">${escapeHtml(child.text)}</a>`;
+      return `<a class="${cls}" href="${escapeHtml(child.href)}"${propAttrs(child)}>${escapeHtml(child.text)}</a>`;
     }
     case "button":
       return renderButton(child, ctx);
@@ -15447,6 +15450,10 @@ var page_schema_default = {
               }
             }
           }
+        },
+        figmaComponent: {
+          type: "string",
+          minLength: 1
         }
       }
     },
@@ -15619,6 +15626,12 @@ var page_schema_default = {
               type: "number"
             }
           }
+        },
+        prop: {
+          $ref: "common.schema.json#/definitions/kebab"
+        },
+        hrefProp: {
+          $ref: "common.schema.json#/definitions/kebab"
         }
       },
       allOf: [
@@ -16118,7 +16131,18 @@ function crossReferenceErrors(spec, warnings = []) {
       }
     }
   };
+  let currentComponent = null;
   const checkChild = (file, child, path, groupNames) => {
+    for (const key of ["prop", "hrefProp"]) {
+      if (!child[key]) continue;
+      if (!currentComponent) err(file, `${path}/${key}`, `${key} binds a component prop: use it only inside components.yaml children`);
+      else if (!(currentComponent.props ?? []).includes(child[key])) err(file, `${path}/${key}`, `prop "${child[key]}" is not in ${currentComponent.name}.props`);
+    }
+    if (child.type === "component" && child.props && components.get(child.ref)?.props) {
+      for (const key of Object.keys(child.props)) {
+        if (!components.get(child.ref).props.includes(key)) err(file, `${path}/props/${key}`, `"${key}" is not a prop of component "${child.ref}" (props: ${components.get(child.ref).props.join(", ")})`);
+      }
+    }
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
     if (child.type === "image" || child.type === "svg") {
@@ -16145,6 +16169,7 @@ function crossReferenceErrors(spec, warnings = []) {
   };
   spec.components.components.forEach((component, ci) => {
     const base = `/components/${ci}`;
+    currentComponent = component;
     checkSurface("components.yaml", base, component.surface);
     checkLayout("components.yaml", component.layout, `${base}/layout`);
     const groupNames = /* @__PURE__ */ new Set();
@@ -16156,6 +16181,7 @@ function crossReferenceErrors(spec, warnings = []) {
       checkChild("components.yaml", child, `${base}/children/${i}`, groupNames);
     });
     checkOverrides("components.yaml", { id: component.name, overrides: component.overrides, component: true }, `${base}/overrides`);
+    currentComponent = null;
     if (component.collapse && !(component.children ?? []).some((c) => c.type === "group" && c.name === "menu")) {
       err("components.yaml", `${base}/collapse`, `collapse requires a group named "menu" among the component children`);
     }
@@ -16164,6 +16190,22 @@ function crossReferenceErrors(spec, warnings = []) {
   spec.project.pages.forEach((p, i) => {
     if (!spec.pages[p.slug]) err("project.yaml", `/pages/${i}`, `page "${p.slug}" has no pages/${p.slug}.yaml`);
   });
+  const seenIds = /* @__PURE__ */ new Map();
+  const pageOrder = [.../* @__PURE__ */ new Set([...spec.project.pages.map((p) => p.slug), ...Object.keys(spec.pages)])].filter((slug) => spec.pages[slug]);
+  for (const slug of pageOrder) {
+    spec.pages[slug].sections.forEach((section, si) => {
+      const { figmaNode, ...content } = section;
+      const signature = stableStringify(content);
+      const first = seenIds.get(section.id);
+      if (!first) seenIds.set(section.id, { slug, signature, pages: [slug] });
+      else if (first.signature !== signature) {
+        err(`pages/${slug}.yaml`, `/sections/${si}/id`, `section id "${section.id}" is also on page "${first.slug}" with different content: its classes would collide \u2014 rename it (e.g. "${section.id}-${slug}") or make it a shared component`);
+      } else first.pages.push(slug);
+    });
+  }
+  for (const [id, { pages }] of seenIds) {
+    if (pages.length > 1) warnings.push({ file: "pages", path: "/", message: `section "${id}" is identical on pages ${pages.join(", ")}: make it a shared component so it is built once and edited in one place` });
+  }
   for (const [slug, page2] of Object.entries(spec.pages)) {
     const file = `pages/${slug}.yaml`;
     if (!declared.has(slug)) err(file, "/", `page "${slug}" is not listed in project.yaml`);

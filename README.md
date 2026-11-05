@@ -2,7 +2,7 @@
 
 Plugins de Claude Code que convierten un diseño aprobado en **Figma** en un sitio construido en **Webflow**, por fases y con revisión entre cada una. El resultado tiene nomenclatura **Client-First**, variables, `rem`, flex/grid y elementos nativos, y se compara contra Figma por número y por imagen.
 
-**Versión actual: 0.12.0** · ¿Primera vez? Sigue la guía paso a paso: [docs/onboarding.md](docs/onboarding.md).
+**Versión actual: 0.13.0** · ¿Primera vez? Sigue la guía paso a paso: [docs/onboarding.md](docs/onboarding.md).
 
 | Plugin | Qué hace | Comandos |
 |---|---|---|
@@ -39,7 +39,7 @@ claude plugin install build-core@agency-build-kit
 claude plugin install webflow-builder@agency-build-kit
 ```
 
-Verifica con `claude plugin list | grep -A4 agency-build-kit`: los dos plugins en `0.12.0` y `✔ enabled`. Dentro de Claude Code, `/build-audit` debe autocompletar `/build-core:build-audit`.
+Verifica con `claude plugin list | grep -A4 agency-build-kit`: los dos plugins en `0.13.0` y `✔ enabled`. Dentro de Claude Code, `/build-audit` debe autocompletar `/build-core:build-audit`.
 
 **Actualizar:** `git -C ~/Agencia/agency-build-kit pull` y abre una sesión nueva (o `/reload-plugins`). Si `claude plugin list` no muestra `Read from: …/plugins/…`, corre además `claude plugin marketplace update agency-build-kit` y `claude plugin update <plugin>@agency-build-kit`.
 
@@ -56,6 +56,7 @@ Convierte el Figma en `site-spec/`. Usa un link al frame de la página (*Copy li
 - **Sin auto layout no es problema:** `infer-layout.mjs` calcula fila, columna o grid, gap, padding y alineación a partir de las posiciones. Solo pregunta los casos de baja confianza. Glows, stickers y capas superpuestas pasan a `decorative`.
 - **Comportamiento:** te muestra todas las secciones con su suposición (estática, slider, tabs, acordeón, lightbox, video, modal, marquee, contador, código) y te pregunta los detalles.
 - Assets: SVG con `viewBox`, rasters exportados a 2x reales, recortes con transparencia verificada.
+- **Sitios de varias páginas:** `shared-sections.mjs` detecta las secciones repetidas (idénticas o con la misma estructura y distinto copy) y te propone convertirlas en **componentes compartidos con props**: se construyen y se comparan con Figma una sola vez, y en cada página se colocan instancias con su propio copy.
 - No inventa copy, links ni alt: todo lo dudoso va a `open-questions.md`.
 
 ### `/webflow-builder:wf-setup [sitio] [--update]`
@@ -136,6 +137,7 @@ Los comandos usan scripts de Node sin dependencias, en `plugins/*/scripts/`:
 |---|---|
 | `validate-spec.mjs` | Schemas + referencias cruzadas + assets (`--require-resolved` exige las preguntas resueltas) |
 | `infer-layout.mjs` | Layout a partir de posiciones de Figma, con nivel de confianza |
+| `shared-sections.mjs` | Secciones repetidas entre páginas → candidatas a componente compartido |
 | `plan-setup.mjs` · `plan-section.mjs` · `plan-component.mjs` · `plan-motion.mjs` | Planes que ejecuta el agente en Webflow |
 | `compare-values.mjs` | Comparación numérica Figma/plan vs. Webflow |
 | `qa-structural.mjs` · `figma-coverage.mjs` | Pasadas 1 y 2 del QA |

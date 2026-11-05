@@ -4,6 +4,7 @@ import AjvModule from 'ajv';
 import { tokenValueIndex } from './qa-structural.mjs';
 import { pngAlpha, svgIssues } from './asset-checks.mjs';
 import { MOTION_PRESETS } from './motion-presets.mjs';
+import { stableStringify } from './spec-hash.mjs';
 import { validateClassName } from './class-names.mjs';
 import commonSchema from '../../plugins/build-core/skills/site-spec/schemas/common.schema.json' with { type: 'json' };
 import projectSchema from '../../plugins/build-core/skills/site-spec/schemas/project.schema.json' with { type: 'json' };
@@ -165,7 +166,18 @@ function crossReferenceErrors(spec, warnings = []) {
     }
   };
 
+  let currentComponent = null; // set while checking components.yaml children
   const checkChild = (file, child, path, groupNames) => {
+    for (const key of ['prop', 'hrefProp']) {
+      if (!child[key]) continue;
+      if (!currentComponent) err(file, `${path}/${key}`, `${key} binds a component prop: use it only inside components.yaml children`);
+      else if (!(currentComponent.props ?? []).includes(child[key])) err(file, `${path}/${key}`, `prop "${child[key]}" is not in ${currentComponent.name}.props`);
+    }
+    if (child.type === 'component' && child.props && components.get(child.ref)?.props) {
+      for (const key of Object.keys(child.props)) {
+        if (!components.get(child.ref).props.includes(key)) err(file, `${path}/props/${key}`, `"${key}" is not a prop of component "${child.ref}" (props: ${components.get(child.ref).props.join(', ')})`);
+      }
+    }
     if (child.style && !typography.has(child.style)) err(file, `${path}/style`, `unknown typography token "${child.style}"`);
     if (child.color && !colors.has(child.color)) err(file, `${path}/color`, `unknown color token "${child.color}"`);
     if (child.type === 'image' || child.type === 'svg') {
@@ -193,6 +205,7 @@ function crossReferenceErrors(spec, warnings = []) {
 
   spec.components.components.forEach((component, ci) => {
     const base = `/components/${ci}`;
+    currentComponent = component;
     checkSurface('components.yaml', base, component.surface);
     checkLayout('components.yaml', component.layout, `${base}/layout`);
     const groupNames = new Set();
@@ -204,6 +217,7 @@ function crossReferenceErrors(spec, warnings = []) {
       checkChild('components.yaml', child, `${base}/children/${i}`, groupNames);
     });
     checkOverrides('components.yaml', { id: component.name, overrides: component.overrides, component: true }, `${base}/overrides`);
+    currentComponent = null;
     if (component.collapse && !(component.children ?? []).some((c) => c.type === 'group' && c.name === 'menu')) {
       err('components.yaml', `${base}/collapse`, `collapse requires a group named "menu" among the component children`);
     }
@@ -213,6 +227,24 @@ function crossReferenceErrors(spec, warnings = []) {
   spec.project.pages.forEach((p, i) => {
     if (!spec.pages[p.slug]) err('project.yaml', `/pages/${i}`, `page "${p.slug}" has no pages/${p.slug}.yaml`);
   });
+
+  // Classes come from section ids, so one id must mean one section across the whole site.
+  const seenIds = new Map();
+  const pageOrder = [...new Set([...spec.project.pages.map((p) => p.slug), ...Object.keys(spec.pages)])].filter((slug) => spec.pages[slug]);
+  for (const slug of pageOrder) {
+    spec.pages[slug].sections.forEach((section, si) => {
+      const { figmaNode, ...content } = section;
+      const signature = stableStringify(content);
+      const first = seenIds.get(section.id);
+      if (!first) seenIds.set(section.id, { slug, signature, pages: [slug] });
+      else if (first.signature !== signature) {
+        err(`pages/${slug}.yaml`, `/sections/${si}/id`, `section id "${section.id}" is also on page "${first.slug}" with different content: its classes would collide — rename it (e.g. "${section.id}-${slug}") or make it a shared component`);
+      } else first.pages.push(slug);
+    });
+  }
+  for (const [id, { pages }] of seenIds) {
+    if (pages.length > 1) warnings.push({ file: 'pages', path: '/', message: `section "${id}" is identical on pages ${pages.join(', ')}: make it a shared component so it is built once and edited in one place` });
+  }
 
   for (const [slug, page] of Object.entries(spec.pages)) {
     const file = `pages/${slug}.yaml`;

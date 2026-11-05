@@ -377,3 +377,40 @@ test('qa: component overrides only target the component own classes', () => {
   assert.ok(errors.some((e) => e.file === 'components.yaml' && /hero_component/.test(e.path) && /navbar_\*/.test(e.message)), JSON.stringify(errors));
   assert.ok(errors.some((e) => /\$space\.lg/.test(e.message)));
 });
+
+function withSecondPage(mutate) {
+  const dir = copyFixture();
+  editYaml(dir, 'project.yaml', (p) => { p.pages.push({ slug: 'about', figmaNode: '3:1' }); });
+  cpSync(join(dir, 'pages/home.yaml'), join(dir, 'pages/about.yaml'));
+  editYaml(dir, 'pages/about.yaml', (p) => { p.page = 'about'; p.figmaNode = '3:1'; mutate?.(p); });
+  return dir;
+}
+
+test('multi-page: the same section id with different content on two pages is an error (class collision)', () => {
+  const dir = withSecondPage((p) => { p.sections[1].children[0].text = 'Other title'; p.sections[1].layout.gap = 'space.lg'; });
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => e.file === 'pages/about.yaml' && /section id "features" is also on page "home" with different content/.test(e.message)), JSON.stringify(errors));
+});
+
+test('multi-page: an identical section on two pages is valid but warns to make it a shared component', () => {
+  const dir = withSecondPage();
+  const result = validateSpec(loadSpec(dir));
+  assert.deepEqual(result.errors, []);
+  assert.ok(result.warnings.some((w) => /"hero" is identical on pages home, about/.test(w.message)), JSON.stringify(result.warnings));
+});
+
+test('shared: prop names must be declared; pages cannot use prop; instance props must exist', () => {
+  const dir = copyFixture();
+  editYaml(dir, 'components.yaml', (c) => {
+    const nav = c.components.find((x) => x.name === 'navbar');
+    nav.children[0].children[0].prop = 'undeclared';
+  });
+  editYaml(dir, 'pages/home.yaml', (p) => {
+    p.sections[0].children[0].prop = 'title';
+    p.sections[1].children[1].children[0].props.subtitle = 'nope';
+  });
+  const errors = errorsFor(dir);
+  assert.ok(errors.some((e) => e.file === 'components.yaml' && /prop "undeclared" is not in navbar\.props/.test(e.message)), JSON.stringify(errors));
+  assert.ok(errors.some((e) => e.file === 'pages/home.yaml' && /prop.*only inside components\.yaml/.test(e.message)));
+  assert.ok(errors.some((e) => /"subtitle" is not a prop of component "card"/.test(e.message)));
+});

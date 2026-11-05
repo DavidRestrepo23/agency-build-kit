@@ -109,6 +109,10 @@
               }
             }
           }
+        },
+        "figmaComponent": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -281,6 +285,12 @@
               "type": "number"
             }
           }
+        },
+        "prop": {
+          "$ref": "common.schema.json#/definitions/kebab"
+        },
+        "hrefProp": {
+          "$ref": "common.schema.json#/definitions/kebab"
         }
       },
       "allOf": [
