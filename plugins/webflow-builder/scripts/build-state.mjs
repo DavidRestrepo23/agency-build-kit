@@ -103,6 +103,13 @@ function componentNeedsVisual(state, platform, component, specHash) {
   const entry = state?.[platform]?.components?.[component];
   return !(entry && entry.status === "built" && entry.specHash === specHash);
 }
+var MOTION_STATUSES = ["done", "skipped"];
+function setMotionState(state, { platform, page, status, effects }) {
+  if (!MOTION_STATUSES.includes(status)) throw new Error(`invalid motion status "${status}" (done | skipped)`);
+  const platformState = state[platform] ?? {};
+  const entry = { status, effects: effects ?? 0, at: (/* @__PURE__ */ new Date()).toISOString() };
+  return { ...state, [platform]: { ...platformState, motion: { ...platformState.motion, [page]: entry } } };
+}
 
 // src/cli/build-state.mjs
 var OPTIONS = {
@@ -117,7 +124,8 @@ var OPTIONS = {
   "page-id": { type: "string" },
   "site-id": { type: "string" },
   iterations: { type: "string" },
-  pending: { type: "string" }
+  pending: { type: "string" },
+  effects: { type: "string" }
 };
 runCli((argv) => {
   const { values, positionals } = parseArgs({ args: argv, options: OPTIONS, allowPositionals: true });
@@ -157,10 +165,16 @@ runCli((argv) => {
     writeState(specDir, next);
     return { ok: true, current: next[values.platform].components[values.component] };
   }
+  if (command === "set-motion") {
+    if (!values.page) throw new Error("--page is required");
+    const next = setMotionState(state, { platform: values.platform, page: values.page, status: values.status, effects: values.effects !== void 0 ? Number(values.effects) : void 0 });
+    writeState(specDir, next);
+    return { ok: true, current: next[values.platform].motion[values.page] };
+  }
   if (command === "set-setup") {
     const next = setSetupState(state, { platform: values.platform, siteId: values["site-id"], status: values.status });
     writeState(specDir, next);
     return { ok: true, setup: next[values.platform].setup };
   }
-  throw new Error(`unknown command "${command}"; use get | set-section | set-setup | get-component | set-component`);
+  throw new Error(`unknown command "${command}"; use get | set-section | set-setup | get-component | set-component | set-motion`);
 });

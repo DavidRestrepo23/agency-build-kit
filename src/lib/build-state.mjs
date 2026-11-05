@@ -94,3 +94,12 @@ export function componentNeedsVisual(state, platform, component, specHash) {
   const entry = state?.[platform]?.components?.[component];
   return !(entry && entry.status === 'built' && entry.specHash === specHash);
 }
+
+export const MOTION_STATUSES = ['done', 'skipped'];
+
+export function setMotionState(state, { platform, page, status, effects }) {
+  if (!MOTION_STATUSES.includes(status)) throw new Error(`invalid motion status "${status}" (done | skipped)`);
+  const platformState = state[platform] ?? {};
+  const entry = { status, effects: effects ?? 0, at: new Date().toISOString() };
+  return { ...state, [platform]: { ...platformState, motion: { ...platformState.motion, [page]: entry } } };
+}

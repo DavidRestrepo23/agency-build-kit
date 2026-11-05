@@ -7415,6 +7415,7 @@ function loadSpec(dir) {
     assets: readYaml(dir, join("assets", "manifest.yaml")),
     pages,
     openQuestions: existsSync(openQuestionsPath) ? readFileSync(openQuestionsPath, "utf8") : "",
+    motion: existsSync(join(dir, "motion.yaml")) ? readYaml(dir, "motion.yaml") : null,
     buildState
   };
 }
@@ -7476,7 +7477,10 @@ function resumeStatus(spec) {
     else if (visual || componentsPendingVisual.length) next = `/webflow-builder:wf-build ${(visual ?? entries[0])[0]} --phase visual (Designer open)`;
     else if (qa) next = `/webflow-builder:wf-qa ${qa[0]}`;
     else if (fix) next = `/webflow-builder:wf-qa ${fix[0]} --fix`;
-    else next = "Done: every page passes QA \u2014 ready for the developer to publish";
+    else {
+      const unpolished = entries.find(([slug]) => !["done", "skipped"].includes(webflow.motion?.[slug]?.status));
+      next = unpolished ? `/webflow-builder:wf-motion ${unpolished[0]} (optional polish: hovers and scroll effects \u2014 or skip it)` : "Done: every page passes QA \u2014 ready for the developer to publish";
+    }
   }
   return { ok: true, openQuestions: open, setup: webflow.setup?.status ?? "pending", pages, componentsPendingVisual, next, lastEntries: lastEntries(spec.dir) };
 }

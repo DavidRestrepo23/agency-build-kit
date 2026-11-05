@@ -768,13 +768,13 @@ var require_createNode = __commonJS({
     var defaultTagPrefix = "tag:yaml.org,2002:";
     function findTagObject(value, tagName, tags) {
       if (tagName) {
-        const match = tags.filter((t) => t.tag === tagName);
-        const tagObj = match.find((t) => !t.format) ?? match[0];
+        const match = tags.filter((t2) => t2.tag === tagName);
+        const tagObj = match.find((t2) => !t2.format) ?? match[0];
         if (!tagObj)
           throw new Error(`Tag ${tagName} not found`);
         return tagObj;
       }
-      return tags.find((t) => t.identify?.(value) && !t.format);
+      return tags.find((t2) => t2.identify?.(value) && !t2.format);
     }
     function createNode(value, tagName, ctx) {
       if (identity.isDocument(value))
@@ -1401,10 +1401,10 @@ ${indent}`);
       let res = _stringify(type);
       if (res === null) {
         const { defaultKeyType, defaultStringType } = ctx.options;
-        const t = implicitKey && defaultKeyType || defaultStringType;
-        res = _stringify(t);
+        const t2 = implicitKey && defaultKeyType || defaultStringType;
+        res = _stringify(t2);
         if (res === null)
-          throw new Error(`Unsupported default string type ${t}`);
+          throw new Error(`Unsupported default string type ${t2}`);
       }
       return res;
     }
@@ -1464,24 +1464,24 @@ var require_stringify = __commonJS({
     }
     function getTagObject(tags, item) {
       if (item.tag) {
-        const match = tags.filter((t) => t.tag === item.tag);
+        const match = tags.filter((t2) => t2.tag === item.tag);
         if (match.length > 0)
-          return match.find((t) => t.format === item.format) ?? match[0];
+          return match.find((t2) => t2.format === item.format) ?? match[0];
       }
       let tagObj = void 0;
       let obj;
       if (identity.isScalar(item)) {
         obj = item.value;
-        let match = tags.filter((t) => t.identify?.(obj));
+        let match = tags.filter((t2) => t2.identify?.(obj));
         if (match.length > 1) {
-          const testMatch = match.filter((t) => t.test);
+          const testMatch = match.filter((t2) => t2.test);
           if (testMatch.length > 0)
             match = testMatch;
         }
-        tagObj = match.find((t) => t.format === item.format) ?? match.find((t) => !t.format);
+        tagObj = match.find((t2) => t2.format === item.format) ?? match.find((t2) => !t2.format);
       } else {
         obj = item;
-        tagObj = tags.find((t) => t.nodeClass && obj instanceof t.nodeClass);
+        tagObj = tags.find((t2) => t2.nodeClass && obj instanceof t2.nodeClass);
       }
       if (!tagObj) {
         const name = obj?.constructor?.name ?? (obj === null ? "null" : typeof obj);
@@ -4410,7 +4410,7 @@ var require_compose_collection = __commonJS({
       if (!tagToken || !tagName || tagName === "!" || tagName === YAMLMap.YAMLMap.tagName && expType === "map" || tagName === YAMLSeq.YAMLSeq.tagName && expType === "seq") {
         return resolveCollection(CN, ctx, token, onError, tagName);
       }
-      let tag = ctx.schema.tags.find((t) => t.tag === tagName && t.collection === expType);
+      let tag = ctx.schema.tags.find((t2) => t2.tag === tagName && t2.collection === expType);
       if (!tag) {
         const kt = ctx.schema.knownTags[tagName];
         if (kt?.collection === expType) {
@@ -8872,7 +8872,7 @@ var require_dataType = __commonJS({
     exports.coerceAndCheckDataType = coerceAndCheckDataType;
     var COERCIBLE = /* @__PURE__ */ new Set(["string", "number", "integer", "boolean", "null"]);
     function coerceToTypes(types, coerceTypes) {
-      return coerceTypes ? types.filter((t) => COERCIBLE.has(t) || coerceTypes === "array" && t === "array") : [];
+      return coerceTypes ? types.filter((t2) => COERCIBLE.has(t2) || coerceTypes === "array" && t2 === "array") : [];
     }
     function coerceData(it, types, coerceTo) {
       const { gen, data, opts } = it;
@@ -8882,9 +8882,9 @@ var require_dataType = __commonJS({
         gen.if((0, codegen_1._)`${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen.assign(data, (0, codegen_1._)`${data}[0]`).assign(dataType, (0, codegen_1._)`typeof ${data}`).if(checkDataTypes(types, data, opts.strictNumbers), () => gen.assign(coerced, data)));
       }
       gen.if((0, codegen_1._)`${coerced} !== undefined`);
-      for (const t of coerceTo) {
-        if (COERCIBLE.has(t) || t === "array" && opts.coerceTypes === "array") {
-          coerceSpecificType(t);
+      for (const t2 of coerceTo) {
+        if (COERCIBLE.has(t2) || t2 === "array" && opts.coerceTypes === "array") {
+          coerceSpecificType(t2);
         }
       }
       gen.else();
@@ -8894,8 +8894,8 @@ var require_dataType = __commonJS({
         gen.assign(data, coerced);
         assignParentData(it, coerced);
       });
-      function coerceSpecificType(t) {
-        switch (t) {
+      function coerceSpecificType(t2) {
+        switch (t2) {
           case "string":
             gen.elseIf((0, codegen_1._)`${dataType} == "number" || ${dataType} == "boolean"`).assign(coerced, (0, codegen_1._)`"" + ${data}`).elseIf((0, codegen_1._)`${data} === null`).assign(coerced, (0, codegen_1._)`""`);
             return;
@@ -8967,8 +8967,8 @@ var require_dataType = __commonJS({
       }
       if (types.number)
         delete types.integer;
-      for (const t in types)
-        cond = (0, codegen_1.and)(cond, checkDataType(t, data, strictNums, correct));
+      for (const t2 in types)
+        cond = (0, codegen_1.and)(cond, checkDataType(t2, data, strictNums, correct));
       return cond;
     }
     exports.checkDataTypes = checkDataTypes;
@@ -9883,9 +9883,9 @@ var require_validate = __commonJS({
         it.dataTypes = types;
         return;
       }
-      types.forEach((t) => {
-        if (!includesType(it.dataTypes, t)) {
-          strictTypesError(it, `type "${t}" not allowed by context "${it.dataTypes.join(",")}"`);
+      types.forEach((t2) => {
+        if (!includesType(it.dataTypes, t2)) {
+          strictTypesError(it, `type "${t2}" not allowed by context "${it.dataTypes.join(",")}"`);
         }
       });
       narrowSchemaTypes(it, types);
@@ -9901,7 +9901,7 @@ var require_validate = __commonJS({
         const rule = rules[keyword];
         if (typeof rule == "object" && (0, applicability_1.shouldUseRule)(it.schema, rule)) {
           const { type } = rule.definition;
-          if (type.length && !type.some((t) => hasApplicableType(ts, t))) {
+          if (type.length && !type.some((t2) => hasApplicableType(ts, t2))) {
             strictTypesError(it, `missing type "${type.join(",")}" for keyword "${keyword}"`);
           }
         }
@@ -9910,15 +9910,15 @@ var require_validate = __commonJS({
     function hasApplicableType(schTs, kwdT) {
       return schTs.includes(kwdT) || kwdT === "number" && schTs.includes("integer");
     }
-    function includesType(ts, t) {
-      return ts.includes(t) || t === "integer" && ts.includes("number");
+    function includesType(ts, t2) {
+      return ts.includes(t2) || t2 === "integer" && ts.includes("number");
     }
     function narrowSchemaTypes(it, withTypes) {
       const ts = [];
-      for (const t of it.dataTypes) {
-        if (includesType(withTypes, t))
-          ts.push(t);
-        else if (withTypes.includes("integer") && t === "number")
+      for (const t2 of it.dataTypes) {
+        if (includesType(withTypes, t2))
+          ts.push(t2);
+        else if (withTypes.includes("integer") && t2 === "number")
           ts.push("integer");
       }
       it.dataTypes = ts;
@@ -11926,7 +11926,7 @@ var require_core = __commonJS({
           type: (0, dataType_1.getJSONTypes)(def.type),
           schemaType: (0, dataType_1.getJSONTypes)(def.schemaType)
         };
-        (0, util_1.eachItem)(keyword, definition.type.length === 0 ? (k) => addRule.call(this, k, definition) : (k) => definition.type.forEach((t) => addRule.call(this, k, definition, t)));
+        (0, util_1.eachItem)(keyword, definition.type.length === 0 ? (k) => addRule.call(this, k, definition) : (k) => definition.type.forEach((t2) => addRule.call(this, k, definition, t2)));
         return this;
       }
       getKeyword(keyword) {
@@ -12125,7 +12125,7 @@ var require_core = __commonJS({
       if (dataType && post)
         throw new Error('keyword with "post" flag cannot have "type"');
       const { RULES } = this;
-      let ruleGroup = post ? RULES.post : RULES.rules.find(({ type: t }) => t === dataType);
+      let ruleGroup = post ? RULES.post : RULES.rules.find(({ type: t2 }) => t2 === dataType);
       if (!ruleGroup) {
         ruleGroup = { type: dataType, rules: [] };
         RULES.rules.push(ruleGroup);
@@ -12673,7 +12673,7 @@ var require_uniqueItems = __commonJS({
           gen.if((0, codegen_1._)`${i} > 1`, () => (canOptimize() ? loopN : loopN2)(i, j));
         }
         function canOptimize() {
-          return itemTypes.length > 0 && !itemTypes.some((t) => t === "object" || t === "array");
+          return itemTypes.length > 0 && !itemTypes.some((t2) => t2 === "object" || t2 === "array");
         }
         function loopN(i, j) {
           const item = gen.name("item");
@@ -14271,6 +14271,7 @@ function loadSpec(dir) {
     assets: readYaml(dir, join("assets", "manifest.yaml")),
     pages,
     openQuestions: existsSync(openQuestionsPath) ? readFileSync(openQuestionsPath, "utf8") : "",
+    motion: existsSync(join(dir, "motion.yaml")) ? readYaml(dir, "motion.yaml") : null,
     buildState
   };
 }
@@ -14284,6 +14285,38 @@ import { join as join2 } from "node:path";
 var SEGMENT = "[a-z0-9]+(?:-[a-z0-9]+)*";
 var CUSTOM = new RegExp(`^${SEGMENT}_${SEGMENT}$`);
 var COMBO = new RegExp(`^is-${SEGMENT}$`);
+var UTILITY_PATTERNS = [
+  /^page-wrapper$/,
+  /^main-wrapper$/,
+  /^padding-global$/,
+  /^container-(small|medium|large)$/,
+  /^padding-section-(small|medium|large)$/,
+  /^heading-style-h[1-6]$/,
+  /^text-size-[a-z0-9]+(-[a-z0-9]+)*$/,
+  /^text-weight-(light|normal|medium|semibold|bold)$/,
+  /^text-color-[a-z0-9]+(-[a-z0-9]+)*$/,
+  /^background-color-[a-z0-9]+(-[a-z0-9]+)*$/,
+  /^text-align-(left|center|right)$/,
+  /^text-rich-text$/,
+  /^(margin|padding)-(top|bottom|left|right|horizontal|vertical)$/,
+  /^(margin|padding)-[a-z0-9]+(-[a-z0-9]+)*$/,
+  /^max-width-(small|medium|large)$/,
+  /^hide-(tablet|mobile-landscape|mobile-portrait)$/,
+  /^surface-[a-z0-9]+(-[a-z0-9]+)*$/,
+  /^button$/
+];
+function validateClassName(name) {
+  if (typeof name !== "string" || name.length === 0) return { ok: false, reason: "class name must be a non-empty string" };
+  if (/[A-Z]/.test(name)) return { ok: false, reason: "class names must be lowercase" };
+  if (/\s/.test(name)) return { ok: false, reason: "class names cannot contain spaces" };
+  if (name.startsWith("is-")) {
+    return COMBO.test(name) ? { ok: true, kind: "combo" } : { ok: false, reason: "combo classes must match is-<kebab-case>" };
+  }
+  if (name.includes("_")) {
+    return CUSTOM.test(name) ? { ok: true, kind: "custom" } : { ok: false, reason: "custom classes must match <folder>_<element> with a single underscore and kebab-case parts" };
+  }
+  return UTILITY_PATTERNS.some((p) => p.test(name)) ? { ok: true, kind: "utility" } : { ok: false, reason: `"${name}" is not a Client-First utility; custom classes need a folder prefix like section_ or hero_` };
+}
 
 // src/lib/units.mjs
 function pxToRem(px) {
@@ -14440,6 +14473,27 @@ function svgIssues(text) {
   if (/<image[\s>]/i.test(text)) issues.push("has an embedded raster <image> (not a real vector)");
   return issues;
 }
+
+// src/lib/motion-presets.mjs
+var EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
+var t = (...props) => props.map((p) => `${p} 250ms ${EASE}`).join(", ");
+var MOTION_PRESETS = {
+  // Hover (Webflow style state "hover" on the target class)
+  "hover-lift": { kind: "hover", base: { transition: t("transform", "box-shadow") }, hover: { transform: "translateY(-2px)", "box-shadow": "0 10px 24px rgba(0, 0, 0, 0.12)" } },
+  "hover-scale": { kind: "hover", base: { transition: t("transform") }, hover: { transform: "scale(1.03)" } },
+  "hover-image-zoom": { kind: "hover", base: { transition: "transform 600ms " + EASE }, hover: { transform: "scale(1.06)" } },
+  "hover-darken": { kind: "hover", base: { transition: t("filter") }, hover: { filter: "brightness(0.92)" } },
+  "hover-fade": { kind: "hover", base: { transition: t("opacity") }, hover: { opacity: "0.8" } },
+  "hover-underline": { kind: "hover", base: { "text-underline-offset": "0.2em" }, hover: { "text-decoration-line": "underline" } },
+  // Scroll / load (native IX3)
+  "scroll-fade-up": { kind: "interaction", trigger: "scroll", from: { opacity: 0, y: 24 }, duration: 0.7 },
+  "scroll-fade-in": { kind: "interaction", trigger: "scroll", from: { opacity: 0 }, duration: 0.6 },
+  "scroll-stagger-children": { kind: "interaction", trigger: "scroll", target: "children", from: { opacity: 0, y: 20 }, duration: 0.6, stagger: 0.08 },
+  "scroll-scale-in": { kind: "interaction", trigger: "scroll", from: { opacity: 0, scale: 0.96 }, duration: 0.7 },
+  "scroll-parallax-y": { kind: "interaction", trigger: "scroll-scrub", from: { y: 40 }, to: { y: -40 } },
+  "load-fade-up": { kind: "interaction", trigger: "load", from: { opacity: 0, y: 24 }, duration: 0.8, stagger: 0.08, target: "children" },
+  "heading-line-reveal": { kind: "interaction", trigger: "scroll", from: { y: 100 }, duration: 0.8, split: "lines" }
+};
 
 // plugins/build-core/skills/site-spec/schemas/common.schema.json
 var common_schema_default = {
@@ -15546,7 +15600,7 @@ function crossReferenceErrors(spec, warnings = []) {
   const errors = [];
   const err = (file, path, message) => errors.push({ file, path, message });
   const colors = new Set(spec.tokens.colors.map((c) => c.name));
-  const typography = new Set(spec.tokens.typography.map((t) => t.name));
+  const typography = new Set(spec.tokens.typography.map((t2) => t2.name));
   const spacing = new Set(Object.keys(spec.tokens.spacing));
   const components = new Map(spec.components.components.map((c) => [c.name, c]));
   const assets = new Map(spec.assets.assets.map((a) => [a.id, a]));
@@ -15728,6 +15782,26 @@ function crossReferenceErrors(spec, warnings = []) {
   }
   return errors;
 }
+function motionErrors(motion) {
+  if (!motion) return [];
+  const errors = [];
+  const err = (path, message) => errors.push({ file: "motion.yaml", path, message });
+  if (motion.intensity && !["subtle", "medium", "bold"].includes(motion.intensity)) err("/intensity", "intensity must be subtle, medium or bold");
+  if (!Array.isArray(motion.effects)) return [...errors, { file: "motion.yaml", path: "/effects", message: "effects must be a list" }];
+  const ids = /* @__PURE__ */ new Set();
+  motion.effects.forEach((e, i) => {
+    const at = `/effects/${i}`;
+    if (!e?.id || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(e.id)) err(`${at}/id`, "id must be kebab-case");
+    else if (ids.has(e.id)) err(`${at}/id`, `duplicate effect id "${e.id}"`);
+    ids.add(e?.id);
+    if (!MOTION_PRESETS[e?.preset]) err(`${at}/preset`, `unknown preset "${e?.preset}" (available: ${Object.keys(MOTION_PRESETS).join(", ")})`);
+    if (!Array.isArray(e?.targets) || !e.targets.length) err(`${at}/targets`, "targets must list at least one class");
+    for (const cls of e?.targets ?? []) {
+      if (!validateClassName(cls).ok) err(`${at}/targets`, `target "${cls}" is not a valid class name: ${validateClassName(cls).reason}`);
+    }
+  });
+  return errors;
+}
 function openQuestionErrors(markdown) {
   return [...markdown.matchAll(/^\s*[-*] \[ \] (.+)$/gm)].map(([, text]) => ({
     file: "open-questions.md",
@@ -15747,6 +15821,7 @@ function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
   }
   const warnings = [];
   if (errors.length === 0) errors.push(...crossReferenceErrors(spec, warnings));
+  errors.push(...motionErrors(spec.motion));
   if (requireResolvedQuestions) errors.push(...openQuestionErrors(spec.openQuestions));
   return { ok: errors.length === 0, errors, warnings };
 }
@@ -15790,7 +15865,7 @@ function planSetup(spec) {
     const vars = {};
     if (page.background) vars["background-color"] = variableName(page.background);
     if (page.color) vars.color = variableName(page.color);
-    const text = page.text && spec.tokens.typography.find((t) => t.name === page.text);
+    const text = page.text && spec.tokens.typography.find((t2) => t2.name === page.text);
     const props = text ? { "font-family": text.family, "font-weight": String(text.weight), "line-height": String(text.lineHeight) } : {};
     const sizes = text ? responsiveVariableNames(text.name, text.size, "-size") : { main: null };
     for (const [bp, size] of Object.entries(sizes)) {

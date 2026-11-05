@@ -32,7 +32,12 @@ test('resumeStatus: next step follows the pipeline', () => {
   assert.match(next(sections(['built', 'structure-built', 'built'])), /wf-build home --phase visual/);
   assert.match(next(sections(['built', 'built', 'built'])), /wf-qa home$/);
   assert.match(next(sections(['qa-pass', 'qa-fail', 'qa-pass'])), /wf-qa home --fix/);
-  assert.match(next(sections(['qa-pass', 'qa-pass', 'qa-pass'])), /done/i);
+  assert.match(next(sections(['qa-pass', 'qa-pass', 'qa-pass'])), /wf-motion home/);
+  const polished = sections(['qa-pass', 'qa-pass', 'qa-pass']);
+  polished.webflow.motion = { home: { status: 'done' } };
+  assert.match(next(polished), /done/i);
+  polished.webflow.motion = { home: { status: 'skipped' } };
+  assert.match(next(polished), /done/i);
 });
 
 test('resumeStatus reports sections, components and the last log entries', () => {

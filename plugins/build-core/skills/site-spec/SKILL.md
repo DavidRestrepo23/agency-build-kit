@@ -18,6 +18,7 @@ description: Reference for the neutral site-spec contract (project, tokens, comp
 | `assets/manifest.yaml` + files | `/build-core:build-audit` | svg / raster@2x exports |
 | `open-questions.md` | `/build-core:build-audit` | ambiguities as `- [ ]` checkboxes, written in `project.language`; dev marks `- [x]` when resolved |
 | `build-state.json` | platform builders only (via `build-state.mjs`) | never edit by hand |
+| `motion.yaml` | `/webflow-builder:wf-motion` (optional, after QA) | intensity, references found and the chosen effects (`id`, kit `preset`, `targets` classes) |
 | `progress.md` | every command (via `progress.mjs log`) | project memory: dated milestones and the next step; a new session reads it (plus build-state) to resume |
 
 ## Rules

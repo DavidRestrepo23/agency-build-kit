@@ -85,6 +85,18 @@ Never publish, never delete styles/variables/pages (the guard asks); list leftov
 
 Without `--fix`, end with: the classified diffs, and the command to apply them (`/webflow-builder:wf-qa <page> --fix`).
 
+## 6. Final question — is everything OK?
+
+When every section of the page is `qa-pass` and nothing blocking is left at page level, ask the developer ONE question:
+
+> "La página coincide con Figma. ¿Todo OK? Si quieres, el siguiente paso es darle vida: busco referencias de efectos modernos (hovers en botones y cards, entradas al hacer scroll) y te propongo un plan por sección."
+
+- **Yes, polish it** → run `/webflow-builder:wf-motion <page>`.
+- **Yes, but no effects** → `build-state.mjs set-motion site-spec --page <page> --status skipped`; the page is ready for the developer to publish.
+- **Not OK** → ask what is wrong and treat it as a pass 2 diff (`--fix`).
+
+Ask in the project `language`.
+
 ## Progress log (project memory)
 
 Before starting, read the resume point and continue from it instead of redoing finished work:

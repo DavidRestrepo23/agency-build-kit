@@ -50,6 +50,7 @@ export function loadSpec(dir) {
     assets: readYaml(dir, join('assets', 'manifest.yaml')),
     pages,
     openQuestions: existsSync(openQuestionsPath) ? readFileSync(openQuestionsPath, 'utf8') : '',
+    motion: existsSync(join(dir, 'motion.yaml')) ? readYaml(dir, 'motion.yaml') : null,
     buildState,
   };
 }

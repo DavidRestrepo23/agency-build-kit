@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import AjvModule from 'ajv';
 import { tokenValueIndex } from './qa-structural.mjs';
 import { pngAlpha, svgIssues } from './asset-checks.mjs';
+import { MOTION_PRESETS } from './motion-presets.mjs';
+import { validateClassName } from './class-names.mjs';
 import commonSchema from '../../plugins/build-core/skills/site-spec/schemas/common.schema.json' with { type: 'json' };
 import projectSchema from '../../plugins/build-core/skills/site-spec/schemas/project.schema.json' with { type: 'json' };
 import tokensSchema from '../../plugins/build-core/skills/site-spec/schemas/tokens.schema.json' with { type: 'json' };
@@ -234,6 +236,27 @@ function crossReferenceErrors(spec, warnings = []) {
   return errors;
 }
 
+function motionErrors(motion) {
+  if (!motion) return [];
+  const errors = [];
+  const err = (path, message) => errors.push({ file: 'motion.yaml', path, message });
+  if (motion.intensity && !['subtle', 'medium', 'bold'].includes(motion.intensity)) err('/intensity', 'intensity must be subtle, medium or bold');
+  if (!Array.isArray(motion.effects)) return [...errors, { file: 'motion.yaml', path: '/effects', message: 'effects must be a list' }];
+  const ids = new Set();
+  motion.effects.forEach((e, i) => {
+    const at = `/effects/${i}`;
+    if (!e?.id || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(e.id)) err(`${at}/id`, 'id must be kebab-case');
+    else if (ids.has(e.id)) err(`${at}/id`, `duplicate effect id "${e.id}"`);
+    ids.add(e?.id);
+    if (!MOTION_PRESETS[e?.preset]) err(`${at}/preset`, `unknown preset "${e?.preset}" (available: ${Object.keys(MOTION_PRESETS).join(', ')})`);
+    if (!Array.isArray(e?.targets) || !e.targets.length) err(`${at}/targets`, 'targets must list at least one class');
+    for (const cls of e?.targets ?? []) {
+      if (!validateClassName(cls).ok) err(`${at}/targets`, `target "${cls}" is not a valid class name: ${validateClassName(cls).reason}`);
+    }
+  });
+  return errors;
+}
+
 function openQuestionErrors(markdown) {
   return [...markdown.matchAll(/^\s*[-*] \[ \] (.+)$/gm)].map(([, text]) => ({
     file: 'open-questions.md',
@@ -254,6 +277,7 @@ export function validateSpec(spec, { requireResolvedQuestions = false } = {}) {
   }
   const warnings = [];
   if (errors.length === 0) errors.push(...crossReferenceErrors(spec, warnings));
+  errors.push(...motionErrors(spec.motion));
   if (requireResolvedQuestions) errors.push(...openQuestionErrors(spec.openQuestions));
   return { ok: errors.length === 0, errors, warnings };
 }

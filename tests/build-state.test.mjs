@@ -137,3 +137,12 @@ test('CLI set-component / get-component', () => {
   assert.equal(out.needsVisual, false);
   assert.deepEqual(out.current.visual, { iterations: 1, pending: ['logo 4px low'] });
 });
+
+test('motion: per-page status done / skipped with the number of effects', () => {
+  const dir = copyFixture();
+  const run = (args) => JSON.parse(spawnSync(process.execPath, ['src/cli/build-state.mjs', ...args], { encoding: 'utf8' }).stdout);
+  const out = run(['set-motion', dir, '--page', 'home', '--status', 'done', '--effects', '5']);
+  assert.equal(out.ok, true, JSON.stringify(out));
+  assert.deepEqual([out.current.status, out.current.effects], ['done', 5]);
+  assert.equal(run(['set-motion', dir, '--page', 'home', '--status', 'later']).ok, false);
+});

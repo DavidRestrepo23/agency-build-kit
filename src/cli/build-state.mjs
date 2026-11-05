@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import { runCli } from '../lib/cli.mjs';
-import { componentNeedsVisual, readState, sectionNeedsBuild, sectionNeedsVisual, setComponentState, setSectionState, setSetupState, writeState } from '../lib/build-state.mjs';
+import { componentNeedsVisual, readState, setMotionState, sectionNeedsBuild, sectionNeedsVisual, setComponentState, setSectionState, setSetupState, writeState } from '../lib/build-state.mjs';
 
 const OPTIONS = {
   platform: { type: 'string', default: 'webflow' },
@@ -15,6 +15,7 @@ const OPTIONS = {
   'site-id': { type: 'string' },
   iterations: { type: 'string' },
   pending: { type: 'string' },
+  effects: { type: 'string' },
 };
 
 runCli((argv) => {
@@ -60,10 +61,16 @@ runCli((argv) => {
     writeState(specDir, next);
     return { ok: true, current: next[values.platform].components[values.component] };
   }
+  if (command === 'set-motion') {
+    if (!values.page) throw new Error('--page is required');
+    const next = setMotionState(state, { platform: values.platform, page: values.page, status: values.status, effects: values.effects !== undefined ? Number(values.effects) : undefined });
+    writeState(specDir, next);
+    return { ok: true, current: next[values.platform].motion[values.page] };
+  }
   if (command === 'set-setup') {
     const next = setSetupState(state, { platform: values.platform, siteId: values['site-id'], status: values.status });
     writeState(specDir, next);
     return { ok: true, setup: next[values.platform].setup };
   }
-  throw new Error(`unknown command "${command}"; use get | set-section | set-setup | get-component | set-component`);
+  throw new Error(`unknown command "${command}"; use get | set-section | set-setup | get-component | set-component | set-motion`);
 });
